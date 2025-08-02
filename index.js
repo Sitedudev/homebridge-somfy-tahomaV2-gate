@@ -24,19 +24,22 @@ class TahomaPlatform {
 
   async connectToTahoma() {
     try {
-      await this.client.login();
-      this.log('Connecté à Tahoma');
-
+     await this.client.login();
+      this.log('✅ Connecté à Tahoma');
+  
       const devices = await this.client.getDevices();
+      this.log(`📦 ${devices.length} appareils récupérés`);
+  
       const portail = devices.find(d =>
         d.label.toLowerCase().includes(this.deviceLabel.toLowerCase())
       );
-
+  
       if (!portail) {
-        this.log.error(`Appareil "${this.deviceLabel}" non trouvé`);
+        this.log.error(`❌ Appareil "${this.deviceLabel}" non trouvé`);
         return;
       }
-      this.log(`Appareil trouvé : ${portail.label}`);
+  
+      this.log(`🚪 Appareil trouvé : ${portail.label}`);
 
       this.accessory = new PlatformAccessory(portail.label, portail.deviceURL);
       this.service = new Service.GarageDoorOpener(portail.label);
@@ -84,7 +87,7 @@ class TahomaPlatform {
 
       this.startPolling(portail);
     } catch (e) {
-      this.log.error('Erreur connexion Tahoma:', e.message);
+      this.log.error('❌ Erreur connexion Tahoma:', e.message);
     }
   }
 
