@@ -39,9 +39,11 @@
       },
       "devices": {
         "type": "array",
-        "title": "Liste des portails",
+        "title": "Portails",
+        "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
         "items": {
           "type": "object",
+          "title": "Portail",
           "properties": {
             "name": {
               "type": "string",
@@ -49,10 +51,14 @@
             },
             "deviceURL": {
               "type": "string",
-              "title": "Device URL"
+              "title": "Device URL du portail"
             }
           },
           "required": ["name", "deviceURL"]
+        },
+        "default": [],
+        "widget": {
+          "addButtonLabel": "Ajouter un portail"
         }
       }
     },
