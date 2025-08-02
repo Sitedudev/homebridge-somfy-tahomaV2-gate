@@ -59,7 +59,7 @@ class TahomaPortailPlatform {
   async loadDevices() {
     if (!this.sessionCookie) return;
     try {
-      const res = await axios.get('https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/setup', {
+      const res = await axios.get('https://www.tahomalink.com/enduser-mobile-web/enduserAPI/setup', {
         headers: { Cookie: this.sessionCookie }
       });
       const allDevices = res.data.devices;
@@ -114,7 +114,7 @@ class TahomaGateAccessory {
 
     try {
       await axios.post(
-        'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/exec/apply',
+        'https://www.tahomalink.com/enduser-mobile-web/enduserAPI/exec/apply',
         {
           label: `${command} via Homebridge`,
           actions: [
