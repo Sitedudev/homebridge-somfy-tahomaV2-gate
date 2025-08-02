@@ -34,12 +34,13 @@ class TahomaPortailPlatform {
       const res = await axios.post(
         'https://www.tahomalink.com/enduser-mobile-web/enduserAPI/login',
         {
-          userId: this.config.username,
-          userPassword: this.config.password
+          username: this.config.username,
+          password: this.config.password
         },
         {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Homebridge Plugin)'
           },
           withCredentials: true
         }
