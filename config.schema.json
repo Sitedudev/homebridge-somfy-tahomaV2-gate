@@ -1,0 +1,14 @@
+{
+  "pluginAlias": "TahomaGate",
+  "pluginType": "platform",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "default": "TahomaGate" },
+      "user": { "type": "string", "title": "Somfy Email" },
+      "password": { "type": "string", "title": "Somfy Password" },
+      "deviceURL": { "type": "string", "title": "Device URL of the Gate" }
+    },
+    "required": ["user", "password", "deviceURL"]
+  }
+}
