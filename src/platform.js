@@ -8,46 +8,55 @@ class TahomaPlatform {
     this.api = api;
     this.accessories = [];
     this.session = null;
-    api.on('didFinishLaunching', () => {
-      this.init();
-    
-      if (api.registerPlatformAction) {
-        api.registerPlatformAction('TahomaGate', 'forceUpdate', async () => {
-          this.log('🔄 Mise à jour manuelle demandée depuis Homebridge UI.');
-          for (const accessory of this.accessories) {
-            if (accessory.context.deviceURL) {
-              const accInstance = new TahomaGateAccessory(this, accessory);
-              await accInstance.forceUpdateState();
-            }
-          }
-        });
-      }
-    });
+
+    // Conserver les accessoires déjà configurés
+    api.on('didFinishLaunching', () => this.init());
   }
 
   async init() {
     try {
+      // Connexion API Somfy TaHoma
       const session = await axios.post('https://ha101-1.overkiz.com/enduser-mobile-web/enduserSession', {
         userId: this.config.user,
         userPassword: this.config.password
       });
-      this.session = session.data;
+      this.session = session.headers['set-cookie']?.find(c => c.startsWith('JSESSIONID')) || session.data.sessionId || null;
 
-      this.addGateAccessory();
+      if (!this.session) {
+        this.log.error('Impossible de récupérer la session JSESSIONID.');
+        return;
+      }
+
+      this.log('Connexion à l’API Somfy réussie.');
+
+      // Pour chaque portail configuré on crée/accessoirise un accessoire
+      for (const device of this.config.devices) {
+        this.addGateAccessory(device);
+      }
+
+      // TODO: ajouter polling global si besoin, ou autre initialisation
     } catch (error) {
       this.log.error('Erreur de connexion à l\'API Somfy:', error.message);
     }
   }
 
-  addGateAccessory() {
-    const uuid = this.api.hap.uuid.generate(this.config.deviceURL);
+  addGateAccessory(device) {
+    const uuid = this.api.hap.uuid.generate(device.deviceURL);
     const existingAccessory = this.accessories.find(acc => acc.UUID === uuid);
-    if (existingAccessory) return;
 
-    const accessory = new this.api.platformAccessory('Portail Somfy', uuid);
-    accessory.context.deviceURL = this.config.deviceURL;
+    if (existingAccessory) {
+      this.log(`Accessoire déjà existant pour ${device.name}`);
+      return;
+    }
+
+    const accessory = new this.api.platformAccessory(device.name, uuid);
+    accessory.context.deviceURL = device.deviceURL;
+    accessory.context.name = device.name;
     new TahomaGateAccessory(this, accessory);
     this.api.registerPlatformAccessories('homebridge-somfy-tahoma-gate', 'TahomaGate', [accessory]);
+    this.accessories.push(accessory);
+
+    this.log(`Accessoire ajouté pour portail : ${device.name}`);
   }
 
   configureAccessory(accessory) {
