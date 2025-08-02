@@ -1,5 +1,4 @@
-const { TahomaClient } = require('tahoma-api');
-
+const TahomaClient = require('./TahomaClient');
 let Service, Characteristic, PlatformAccessory;
 
 class TahomaPlatform {
@@ -12,11 +11,10 @@ class TahomaPlatform {
     this.password = this.config.password;
     this.deviceLabel = this.config.deviceLabel || 'portail';
 
-    this.client = new TahomaClient();
+    this.client = new TahomaClient(this.email, this.password);
     this.accessories = [];
 
     if (api) {
-      this.api = api;
       this.api.on('didFinishLaunching', () => {
         this.log('Homebridge prêt, connexion à Tahoma...');
         this.connectToTahoma();
@@ -26,7 +24,7 @@ class TahomaPlatform {
 
   async connectToTahoma() {
     try {
-      await this.client.login(this.email, this.password);
+      await this.client.login();
       this.log('Connecté à Tahoma');
 
       const devices = await this.client.getDevices();
@@ -84,7 +82,6 @@ class TahomaPlatform {
       this.accessory.addService(this.service);
       this.api.registerPlatformAccessories('homebridge-tahoma-simple', 'TahomaPlatform', [this.accessory]);
 
-      // Start polling
       this.startPolling(portail);
     } catch (e) {
       this.log.error('Erreur connexion Tahoma:', e.message);
@@ -107,7 +104,7 @@ class TahomaPlatform {
       } catch (e) {
         this.log.error('Erreur polling:', e.message);
       }
-    }, 10 * 1000);
+    }, 10000);
   }
 
   configureAccessory(accessory) {
