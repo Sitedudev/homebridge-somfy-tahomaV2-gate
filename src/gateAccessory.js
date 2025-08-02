@@ -80,6 +80,10 @@ class TahomaGateAccessory {
   }
 
   startPollingState() {
+    const Characteristic = this.platform.api.hap.Characteristic;
+    const interval = this.platform.config.pollingInterval || 30000;
+    this.lastKnownState = null;
+  
     this.pollingInterval = setInterval(async () => {
       try {
         const response = await axios.get(
@@ -105,31 +109,31 @@ class TahomaGateAccessory {
         );
   
         if (!state) {
-          this.platform.log.warn('État de portail non disponible dans polling');
+          this.platform.log.warn('État portail non disponible (polling)');
           return;
         }
   
         const currentState = state.value === 'open' ? 0 : 1;
   
-        const Characteristic = this.platform.api.hap.Characteristic;
+        if (currentState !== this.lastKnownState) {
+          this.platform.log(`Mise à jour de l’état : ${state.value}`);
   
-        this.service.updateCharacteristic(
-          Characteristic.CurrentDoorState,
-          currentState
-        );
+          this.service.updateCharacteristic(
+            Characteristic.CurrentDoorState,
+            currentState
+          );
+          this.service.updateCharacteristic(
+            Characteristic.TargetDoorState,
+            currentState
+          );
   
-        // Bonus : aussi mettre à jour le TargetDoorState si besoin
-        this.service.updateCharacteristic(
-          Characteristic.TargetDoorState,
-          currentState
-        );
-  
-        this.platform.log.debug(`Polling - état actuel : ${state.value}`);
+          this.lastKnownState = currentState;
+        }
   
       } catch (err) {
         this.platform.log.error('Erreur polling état portail:', err.message);
       }
-    }, 30000); // 30 secondes
+    }, interval); // Par défaut 30s mais peut être paramétré.
   }
 }
 
