@@ -12,17 +12,21 @@ class TahomaClient {
 
   async login() {
     try {
+      console.log('🔐 Tentative de connexion à Tahoma...');
       const res = await axios.post(`${BASE_URL}/login`, {
         username: this.email,
         password: this.password,
       });
+      console.log('✅ Connexion réussie');
       this.accessToken = res.data.access_token;
       this.refreshToken = res.data.refresh_token;
       return true;
     } catch (e) {
+      console.error('❌ Erreur de connexion Tahoma :', e.response?.status, e.response?.data || e.message);
       throw new Error('Erreur login Tahoma: ' + e.message);
     }
   }
+
 
   async getDevices() {
     try {
