@@ -3,19 +3,42 @@
   "pluginType": "platform",
   "schema": {
     "type": "object",
-    "properties": {
-      "name": { "type": "string", "default": "TahomaGate" },
+    "properties": {      
       "user": { "type": "string", "title": "Somfy Email" },
       "password": { "type": "string", "title": "Somfy Password" },
-      "deviceURL": { "type": "string", "title": "Device URL of the Gate" }
       "pollingInterval": {
         "type": "integer",
         "title": "Polling interval (ms)",
         "default": 30000,
         "description": "Fréquence de vérification de l’état du portail (en millisecondes)."
-      }
+      },
+      "enableHistory": {
+      "type": "boolean",
+      "title": "Activer l'historique des actions",
+      "default": false
     },
-    "required": ["user", "password", "deviceURL"]
+    "enableWebUI": {
+      "type": "boolean",
+      "title": "Activer l'interface Web locale",
+      "default": false
+    },
+    "webPort": {
+      "type": "integer",
+      "title": "Port du serveur Web",
+      "default": 8999
+    },
+    "devices": {
+      "type": "array",
+      "title": "Liste des portails",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "title": "Nom du portail" },
+          "deviceURL": { "type": "string", "title": "DeviceURL du portail" }
+        },
+        "required": ["name", "deviceURL"]
+      }
+    }
   }
   "layout": [
     {
@@ -26,7 +49,26 @@
         "name",
         "user",
         "password",
-        "deviceURL",
+        {
+          "type": "fieldset",
+          "title": "Liste des portails",
+          "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
+          "items": [
+            {
+              "type": "array",
+              "items": {
+                "type": "section",
+                "title": "{{name}}",
+                "expandable": true,
+                "items": [
+                  "devices[].name",
+                  "devices[].deviceURL"
+                ]
+              },
+              "addButtonText": "Ajouter un portail"
+            }
+          ]
+        },
         "pollingInterval"
       ]
     },
