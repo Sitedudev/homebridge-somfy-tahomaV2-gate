@@ -1,4 +1,4 @@
-const axios = require('axios');
+const { TahomaClient } = require('tahoma-api');
 const { TahomaGateAccessory } = require('./gateAccessory');
 
 class TahomaPlatform {
@@ -7,61 +7,42 @@ class TahomaPlatform {
     this.config = config;
     this.api = api;
     this.accessories = [];
-    this.session = null;
+    this.client = null;
 
-    this.api.on('didFinishLaunching', () => {
-      this.log('🔐 Connexion à Overkiz...');
-      this.init();
-    });
+    this.api.on('didFinishLaunching', () => this.init());
   }
 
   async init() {
     try {
-      const response = await axios.post(`https://somfy-europe.overkiz.com/enduser-mobile-web/enduserSession`, {
-      userId: this.config.user,
-      userPassword: this.config.password
-    });
+      this.client = new TahomaClient({
+        server: this.config.server || 'somfy_europe',
+        email: this.config.user,
+        password: this.config.password
+      });
 
-      this.session = response.data;
-      this.log('✅ Connexion réussie');
-      await this.loadDevices();
+      await this.client.login();
+
+      const devices = await this.client.getDevices();
+
+      devices
+        .filter(device => device.uiClass === 'Gate')
+        .forEach(device => this.addAccessory(device));
 
     } catch (error) {
-      this.log.error('❌ Erreur de connexion à Overkiz :', error.response?.data || error.message);
+      this.log.error('❌ Erreur de connexion à Overkiz :', error.message || error);
     }
   }
 
-  async loadDevices() {
-    try {
-      const devicesResponse = await axios.get('https://somfy-europe.overkiz.com/enduser-mobile-web/enduserAPI/setup/devices', {
-        headers: {
-          Cookie: `JSESSIONID=${this.session.id}`
-        }
-      });
+  addAccessory(device) {
+    const uuid = this.api.hap.uuid.generate(device.deviceURL);
+    const existing = this.accessories.find(acc => acc.UUID === uuid);
+    if (existing) return;
 
-      const gateDevices = devicesResponse.data.filter(device => device.controllableName.includes('Gate'));
+    const accessory = new this.api.platformAccessory(device.label, uuid);
+    accessory.context.device = device;
 
-      this.log(`🚪 ${gateDevices.length} portail(s) trouvé(s).`);
-
-      for (const device of gateDevices) {
-        const uuid = this.api.hap.uuid.generate(device.deviceURL);
-        const existingAccessory = this.accessories.find(acc => acc.UUID === uuid);
-
-        if (existingAccessory) {
-          this.log(`ℹ️ Accessoire déjà enregistré : ${device.label}`);
-          continue;
-        }
-
-        const accessory = new this.api.platformAccessory(device.label, uuid);
-        accessory.context.device = device;
-
-        new TahomaGateAccessory(this, accessory);
-        this.api.registerPlatformAccessories('homebridge-somfy-tahoma-gate', 'TahomaPortail', [accessory]);
-      }
-
-    } catch (error) {
-      this.log.error('❌ Erreur lors du chargement des devices :', error.message);
-    }
+    new TahomaGateAccessory(this, accessory, this.client);
+    this.api.registerPlatformAccessories('homebridge-somfy-tahoma-gate', 'TahomaPortail', [accessory]);
   }
 
   configureAccessory(accessory) {
