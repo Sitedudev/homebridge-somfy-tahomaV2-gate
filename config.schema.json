@@ -35,7 +35,7 @@
       "selectedDeviceURL": {
         "type": "string",
         "title": "Portail sélectionné",
-        "enum": [],  /* sera dynamique */
+        "enum": [], 
         "default": ""
       },
       "devices": {
