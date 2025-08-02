@@ -94,8 +94,8 @@
             "title": "{{name}}",
             "expandable": true,
             "items": [
-              "devices[].name",
-              "devices[].deviceURL"
+              "name",
+              "deviceURL"
             ]
           }
         }
