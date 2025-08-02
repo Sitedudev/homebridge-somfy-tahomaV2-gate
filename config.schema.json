@@ -32,9 +32,15 @@
         "title": "Port du serveur Web",
         "default": 8999
       },
+      "selectedDeviceURL": {
+        "type": "string",
+        "title": "Portail sélectionné",
+        "enum": [],  /* sera dynamique */
+        "default": ""
+      },
       "devices": {
         "type": "array",
-        "title": "Portails",
+        "title": "Portails (ajout manuel)",
         "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
         "items": {
           "type": "object",
@@ -51,15 +57,13 @@
           },
           "required": ["name", "deviceURL"]
         },
-        "default": [
-          {
-            "name": "",
-            "deviceURL": ""
-          }
-        ]
+        "default": [],
+        "widget": {
+          "addButtonLabel": "Ajouter un portail"
+        }
       }
     },
-    "required": ["user", "password", "devices"]
+    "required": ["user", "password"]
   },
   "layout": [
     {
@@ -84,24 +88,20 @@
     },
     {
       "type": "fieldset",
-      "title": "Liste des portails",
-      "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
+      "title": "Sélection automatique du portail",
+      "description": "Choisissez un portail parmi la liste découverte par le plugin",
+      "expandable": true,
       "items": [
-        {
-          "type": "array",
-          "fieldName": "devices",
-          "addButton": true,
-          "addButtonText": "Ajouter un portail",
-          "items": {
-            "type": "section",
-            "title": "Portail",
-            "expandable": true,
-            "items": [
-              "name",
-              "deviceURL"
-            ]
-          }
-        }
+        "selectedDeviceURL"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Portails ajoutés manuellement",
+      "description": "Vous pouvez ajouter ici des portails non détectés automatiquement",
+      "expandable": true,
+      "items": [
+        "devices"
       ]
     }
   ]
