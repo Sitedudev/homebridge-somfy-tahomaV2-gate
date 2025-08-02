@@ -22,11 +22,16 @@ class TahomaClient {
       this.refreshToken = res.data.refresh_token;
       return true;
     } catch (e) {
-      console.error('❌ Erreur de connexion Tahoma :', e.response?.status, e.response?.data || e.message);
+      if (e.response) {
+        console.error(`❌ Erreur HTTP ${e.response.status} :`, JSON.stringify(e.response.data, null, 2));
+      } else if (e.request) {
+        console.error('❌ Aucune réponse reçue de la box Tahoma :', e.message);
+      } else {
+        console.error('❌ Erreur inconnue :', e.message);
+      }
       throw new Error('Erreur login Tahoma: ' + e.message);
     }
   }
-
 
   async getDevices() {
     try {
