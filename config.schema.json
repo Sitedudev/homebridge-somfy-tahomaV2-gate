@@ -32,11 +32,6 @@
         "title": "Port du serveur Web",
         "default": 8999
       },
-      "enableHistory": {
-        "type": "boolean",
-        "title": "Activer historique des actions",
-        "default": false
-      },
       "devices": {
         "type": "array",
         "title": "Portails",
@@ -90,19 +85,7 @@
       "title": "Liste des portails",
       "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
       "items": [
-        {
-          "type": "array",
-          "items": {
-            "type": "section",
-            "title": "{{name}}",
-            "expandable": true,
-            "items": [
-              "devices[].name",
-              "devices[].deviceURL"
-            ]
-          },
-          "addButtonText": "Ajouter un portail"
-        }
+        "devices"
       ]
     }
   ]
