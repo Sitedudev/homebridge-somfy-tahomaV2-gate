@@ -31,4 +31,34 @@ class TahomaGateAccessory {
 
     const body = {
       label: 'Homebridge Command',
-     
+      actions: [{
+        deviceURL: this.accessory.context.deviceURL,
+        commands: [{ name: state, parameters: [] }]
+      }]
+    };
+
+    try {
+      await axios.post(url, body, {
+        headers: { 'Cookie': this.platform.session }
+      });
+      this.platform.log(`Commande ${state} envoyée pour portail ${this.accessory.context.name}.`);
+      // Optimiste : on met à jour localement
+      this.currentState = value === 0
+        ? this.platform.api.hap.Characteristic.CurrentDoorState.OPEN
+        : this.platform.api.hap.Characteristic.CurrentDoorState.CLOSED;
+      this.service.updateCharacteristic(this.platform.api.hap.Characteristic.CurrentDoorState, this.currentState);
+    } catch (err) {
+      this.platform.log.error(`Erreur d’envoi de la commande pour portail ${this.accessory.context.name} :`, err.message);
+    }
+  }
+
+  async getCurrentState() {
+    return this.currentState;
+  }
+
+  updateCurrentState(newState) {
+    this.currentState = newState;
+  }
+}
+
+module.exports = { TahomaGateAccessory };
