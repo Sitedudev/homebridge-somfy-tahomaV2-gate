@@ -17,4 +17,29 @@
     },
     "required": ["user", "password", "deviceURL"]
   }
+  "layout": [
+    {
+      "type": "fieldset",
+      "title": "Paramètres principaux",
+      "expandable": true,
+      "items": [
+        "name",
+        "user",
+        "password",
+        "deviceURL",
+        "pollingInterval"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Actions manuelles",
+      "items": [
+        {
+          "type": "button",
+          "title": "Forcer la mise à jour maintenant",
+          "action": "forceUpdate"
+        }
+      ]
+    }
+  ]
 }
