@@ -38,7 +38,42 @@ class TahomaGateAccessory {
   }
 
   async getCurrentState() {
-    return 1; // FERMÉ par défaut (à améliorer avec polling de l’état réel)
+    try {
+      const response = await axios.get(
+        'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/setup/devices',
+        {
+          headers: {
+            'Cookie': 'JSESSIONID=' + this.platform.session.cookie
+          }
+        }
+      );
+  
+      const device = response.data.find(
+        (dev) => dev.deviceURL === this.accessory.context.deviceURL
+      );
+  
+      if (!device) {
+        this.platform.log.error('Aucun appareil trouvé avec ce deviceURL');
+        return 1; // Assume fermé par défaut
+      }
+  
+      const state = device.states.find(
+        (s) => s.name === 'core:OpenClosedState' || s.name === 'core:OpenCloseState'
+      );
+  
+      if (!state) {
+        this.platform.log.warn('Aucun état open/closed trouvé pour cet appareil');
+        return 1;
+      }
+  
+      const currentState = state.value === 'open' ? 0 : 1; // 0: OPEN, 1: CLOSED
+      this.platform.log(`État actuel détecté: ${state.value}`);
+      return currentState;
+  
+    } catch (err) {
+      this.platform.log.error('Erreur lors de la récupération de l’état:', err.message);
+      return 1; // FERMÉ par défaut si erreur
+    }
   }
 }
 
