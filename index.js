@@ -34,19 +34,22 @@ class TahomaPortailPlatform {
       const res = await axios.post(
         'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/login',
         {
-          userId: this.config.username,
-          userPassword: this.config.password
+          identifier: this.config.username,
+          password: this.config.password
         },
         { withCredentials: true }
       );
+  
       const setCookieHeader = res.headers['set-cookie'];
       this.sessionCookie = setCookieHeader ? setCookieHeader[0].split(';')[0] : null;
       if (!this.sessionCookie) throw new Error('Pas de cookie de session');
+  
       this.log('✅ Connexion réussie');
     } catch (err) {
       this.log.error('❌ Erreur de connexion :', err.response?.data || err.message);
     }
   }
+
 
   async loadDevices() {
     if (!this.sessionCookie) return;
