@@ -51,10 +51,7 @@
           },
           "required": ["name", "deviceURL"]
         },
-        "default": [],
-        "widget": {
-          "addButtonLabel": "Ajouter un portail"
-        }
+        "default": []
       }
     },
     "required": ["user", "password", "devices"]
