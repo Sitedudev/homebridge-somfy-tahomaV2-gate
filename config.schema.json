@@ -1,108 +1,29 @@
 {
-  "pluginAlias": "TahomaGate",
-  "pluginType": "platform",
-  "schema": {
-    "type": "object",
-    "properties": {
-      "user": {
-        "type": "string",
-        "title": "Somfy Email"
-      },
-      "password": {
-        "type": "string",
-        "title": "Somfy Password"
-      },
-      "pollingInterval": {
-        "type": "integer",
-        "title": "Intervalle de mise à jour (ms)",
-        "default": 30000
-      },
-      "enableHistory": {
-        "type": "boolean",
-        "title": "Activer l'historique des actions",
-        "default": false
-      },
-      "enableWebUI": {
-        "type": "boolean",
-        "title": "Activer l'interface Web locale",
-        "default": false
-      },
-      "webPort": {
-        "type": "integer",
-        "title": "Port du serveur Web",
-        "default": 8999
-      },
-      "selectedDeviceURL": {
-        "type": "string",
-        "title": "Portail sélectionné",
-        "enum": [], 
-        "default": ""
-      },
-      "devices": {
-        "type": "array",
-        "title": "Portails (ajout manuel)",
-        "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
-        "items": {
-          "type": "object",
-          "title": "Portail",
-          "properties": {
-            "name": {
-              "type": "string",
-              "title": "Nom du portail"
-            },
-            "deviceURL": {
-              "type": "string",
-              "title": "Device URL du portail"
-            }
-          },
-          "required": ["name", "deviceURL"]
+  "platforms": [
+    {
+      "platform": "TahomaPlatform",
+      "name": "Tahoma Portail",
+      "description": "Pilote ton portail Somfy via Tahoma V2",
+      "required": ["email", "password", "deviceLabel"],
+      "properties": {
+        "email": {
+          "title": "Email Somfy",
+          "type": "string",
+          "format": "email",
+          "default": ""
         },
-        "default": [],
-        "widget": {
-          "addButtonLabel": "Ajouter un portail"
+        "password": {
+          "title": "Mot de passe Somfy",
+          "type": "string",
+          "format": "password",
+          "default": ""
+        },
+        "deviceLabel": {
+          "title": "Nom de l'appareil (portail)",
+          "type": "string",
+          "default": "portail"
         }
       }
-    },
-    "required": ["user", "password"]
-  },
-  "layout": [
-    {
-      "type": "fieldset",
-      "title": "Paramètres de connexion",
-      "expandable": true,
-      "items": [
-        "user",
-        "password"
-      ]
-    },
-    {
-      "type": "fieldset",
-      "title": "Options générales",
-      "expandable": true,
-      "items": [
-        "pollingInterval",
-        "enableHistory",
-        "enableWebUI",
-        "webPort"
-      ]
-    },
-    {
-      "type": "fieldset",
-      "title": "Sélection automatique du portail",
-      "description": "Choisissez un portail parmi la liste découverte par le plugin",
-      "expandable": true,
-      "items": [
-        "selectedDeviceURL"
-      ]
-    },
-    {
-      "type": "fieldset",
-      "title": "Portails ajoutés manuellement",
-      "description": "Vous pouvez ajouter ici des portails non détectés automatiquement",
-      "expandable": true,
-      "items": [
-        "devices"
-      ]
     }
   ]
 }
