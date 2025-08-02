@@ -8,7 +8,21 @@ class TahomaPlatform {
     this.api = api;
     this.accessories = [];
     this.session = null;
-    api.on('didFinishLaunching', () => this.init());
+    api.on('didFinishLaunching', () => {
+      this.init();
+    
+      if (api.registerPlatformAction) {
+        api.registerPlatformAction('TahomaGate', 'forceUpdate', async () => {
+          this.log('🔄 Mise à jour manuelle demandée depuis Homebridge UI.');
+          for (const accessory of this.accessories) {
+            if (accessory.context.deviceURL) {
+              const accInstance = new TahomaGateAccessory(this, accessory);
+              await accInstance.forceUpdateState();
+            }
+          }
+        });
+      }
+    });
   }
 
   async init() {
