@@ -1,146 +1,124 @@
-const { API } = require('homebridge');
 const { TahomaClient } = require('tahoma-api');
 
-let Service, Characteristic;
+let Service, Characteristic, PlatformAccessory;
 
-class TahomaGarageDoorAccessory {
-  constructor(log, config) {
+class TahomaPlatform {
+  constructor(log, config, api) {
     this.log = log;
-    this.config = config;
+    this.config = config || {};
+    this.api = api;
+
+    this.email = this.config.email;
+    this.password = this.config.password;
+    this.deviceLabel = this.config.deviceLabel || 'portail';
 
     this.client = new TahomaClient();
+    this.accessories = [];
 
-    this.email = config.email;
-    this.password = config.password;
-    this.deviceLabel = config.deviceLabel || 'portail';
-
-    this.service = new Service.GarageDoorOpener(this.deviceLabel);
-
-    // States HomeKit (0=Open,1=Closed,2=Opening,3=Closing,4=Stopped)
-    this.currentDoorState = Characteristic.CurrentDoorState.CLOSED;
-    this.targetDoorState = Characteristic.TargetDoorState.CLOSED;
-
-    this.service
-      .getCharacteristic(Characteristic.CurrentDoorState)
-      .on('get', this.handleCurrentDoorStateGet.bind(this));
-
-    this.service
-      .getCharacteristic(Characteristic.TargetDoorState)
-      .on('get', this.handleTargetDoorStateGet.bind(this))
-      .on('set', this.handleTargetDoorStateSet.bind(this));
-
-    this.pollInterval = null;
+    if (api) {
+      this.api = api;
+      this.api.on('didFinishLaunching', () => {
+        this.log('Homebridge prêt, connexion à Tahoma...');
+        this.connectToTahoma();
+      });
+    }
   }
 
-  async connect() {
-    this.log('Connexion à Tahoma...');
+  async connectToTahoma() {
     try {
       await this.client.login(this.email, this.password);
       this.log('Connecté à Tahoma');
 
       const devices = await this.client.getDevices();
-      this.device = devices.find(d =>
+      const portail = devices.find(d =>
         d.label.toLowerCase().includes(this.deviceLabel.toLowerCase())
       );
 
-      if (!this.device) {
-        this.log.error(`Appareil avec label "${this.deviceLabel}" non trouvé.`);
+      if (!portail) {
+        this.log.error(`Appareil "${this.deviceLabel}" non trouvé`);
         return;
       }
-      this.log(`Appareil trouvé: ${this.device.label}`);
+      this.log(`Appareil trouvé : ${portail.label}`);
 
-      this.startPolling();
+      this.accessory = new PlatformAccessory(portail.label, portail.deviceURL);
+      this.service = new Service.GarageDoorOpener(portail.label);
+
+      this.currentDoorState = Characteristic.CurrentDoorState.CLOSED;
+      this.targetDoorState = Characteristic.TargetDoorState.CLOSED;
+
+      this.service
+        .getCharacteristic(Characteristic.CurrentDoorState)
+        .on('get', (callback) => {
+          callback(null, this.currentDoorState);
+        });
+
+      this.service
+        .getCharacteristic(Characteristic.TargetDoorState)
+        .on('get', (callback) => {
+          callback(null, this.targetDoorState);
+        })
+        .on('set', async (value, callback) => {
+          try {
+            if (value === Characteristic.TargetDoorState.OPEN) {
+              await this.client.sendCommand(portail, 'open');
+              this.targetDoorState = Characteristic.TargetDoorState.OPEN;
+              this.currentDoorState = Characteristic.CurrentDoorState.OPEN;
+            } else {
+              await this.client.sendCommand(portail, 'close');
+              this.targetDoorState = Characteristic.TargetDoorState.CLOSED;
+              this.currentDoorState = Characteristic.CurrentDoorState.CLOSED;
+            }
+            this.service
+              .getCharacteristic(Characteristic.CurrentDoorState)
+              .updateValue(this.currentDoorState);
+            this.service
+              .getCharacteristic(Characteristic.TargetDoorState)
+              .updateValue(this.targetDoorState);
+            callback(null);
+          } catch (e) {
+            this.log.error('Erreur commande portail:', e.message);
+            callback(e);
+          }
+        });
+
+      this.accessory.addService(this.service);
+      this.api.registerPlatformAccessories('homebridge-tahoma-simple', 'TahomaPlatform', [this.accessory]);
+
+      // Start polling
+      this.startPolling(portail);
     } catch (e) {
       this.log.error('Erreur connexion Tahoma:', e.message);
     }
   }
 
-  startPolling() {
-    this.poll();
-    this.pollInterval = setInterval(() => this.poll(), 10 * 1000);
-  }
-
-  async poll() {
-    if (!this.device) return;
-    try {
-      const states = await this.client.getStates(this.device);
-
-      // Le state est dans states['core:ClosureState'] ou states['core:OpenClosedState']
-      // La fermeture typique vaut 0 fermé, 1 ouvert (inversé pour HomeKit)
-      let state = states['core:ClosureState'] || states['core:OpenClosedState'];
-
-      if (state === undefined) {
-        this.log('Etat du portail introuvable');
-        return;
+  startPolling(portail) {
+    setInterval(async () => {
+      try {
+        const states = await this.client.getStates(portail);
+        const state = states['core:ClosureState'] || states['core:OpenClosedState'];
+        if (state !== undefined) {
+          const newState = state === 0 ? Characteristic.CurrentDoorState.CLOSED : Characteristic.CurrentDoorState.OPEN;
+          if (newState !== this.currentDoorState) {
+            this.currentDoorState = newState;
+            this.service.getCharacteristic(Characteristic.CurrentDoorState).updateValue(newState);
+            this.log(`Etat portail mis à jour: ${newState === 0 ? 'Fermé' : 'Ouvert'}`);
+          }
+        }
+      } catch (e) {
+        this.log.error('Erreur polling:', e.message);
       }
-
-      let hkCurrentState = Characteristic.CurrentDoorState.CLOSED;
-      if (state === 0) hkCurrentState = Characteristic.CurrentDoorState.CLOSED;
-      else if (state === 1) hkCurrentState = Characteristic.CurrentDoorState.OPEN;
-
-      if (this.currentDoorState !== hkCurrentState) {
-        this.currentDoorState = hkCurrentState;
-        this.service
-          .getCharacteristic(Characteristic.CurrentDoorState)
-          .updateValue(hkCurrentState);
-        this.log(`Etat portail mis à jour : ${hkCurrentState === 0 ? 'Ouvert' : 'Fermé'}`);
-      }
-    } catch (e) {
-      this.log.error('Erreur lors du polling:', e.message);
-    }
+    }, 10 * 1000);
   }
 
-  handleCurrentDoorStateGet(callback) {
-    this.log('Get CurrentDoorState:', this.currentDoorState);
-    callback(null, this.currentDoorState);
-  }
-
-  handleTargetDoorStateGet(callback) {
-    this.log('Get TargetDoorState:', this.targetDoorState);
-    callback(null, this.targetDoorState);
-  }
-
-  async handleTargetDoorStateSet(value, callback) {
-    this.log('Set TargetDoorState à:', value);
-
-    if (!this.device) {
-      this.log.error('Appareil non connecté');
-      callback(new Error('Appareil non connecté'));
-      return;
-    }
-
-    try {
-      if (value === Characteristic.TargetDoorState.OPEN) {
-        await this.client.sendCommand(this.device, 'open');
-        this.targetDoorState = Characteristic.TargetDoorState.OPEN;
-        this.currentDoorState = Characteristic.CurrentDoorState.OPEN;
-      } else if (value === Characteristic.TargetDoorState.CLOSED) {
-        await this.client.sendCommand(this.device, 'close');
-        this.targetDoorState = Characteristic.TargetDoorState.CLOSED;
-        this.currentDoorState = Characteristic.CurrentDoorState.CLOSED;
-      }
-      this.service
-        .getCharacteristic(Characteristic.TargetDoorState)
-        .updateValue(this.targetDoorState);
-      this.service
-        .getCharacteristic(Characteristic.CurrentDoorState)
-        .updateValue(this.currentDoorState);
-
-      callback(null);
-    } catch (e) {
-      this.log.error('Erreur commande portail:', e.message);
-      callback(e);
-    }
-  }
-
-  getServices() {
-    return [this.service];
+  configureAccessory(accessory) {
+    this.log('Accessoire configuré:', accessory.displayName);
   }
 }
 
-module.exports = (api) => {
-  Service = api.hap.Service;
-  Characteristic = api.hap.Characteristic;
+module.exports = (homebridge) => {
+  Service = homebridge.hap.Service;
+  Characteristic = homebridge.hap.Characteristic;
+  PlatformAccessory = homebridge.platformAccessory;
 
-  api.registerAccessory('TahomaGarageDoor', TahomaGarageDoorAccessory);
+  homebridge.registerPlatform('homebridge-tahoma-simple', 'TahomaPlatform', TahomaPlatform);
 };
