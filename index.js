@@ -28,20 +28,26 @@ class TahomaPortailPlatform {
     });
   }
 
-  async login() {
+   async login() {
     this.log('🔐 Connexion à Tahoma (ha101-1.overkiz.com)...');
     try {
       const res = await axios.post(
         'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/login',
         {
-          identifier: this.config.username,
-          password: this.config.password
+          userId: this.config.username,
+          userPassword: this.config.password
         },
-        { withCredentials: true }
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
       );
   
       const setCookieHeader = res.headers['set-cookie'];
       this.sessionCookie = setCookieHeader ? setCookieHeader[0].split(';')[0] : null;
+  
       if (!this.sessionCookie) throw new Error('Pas de cookie de session');
   
       this.log('✅ Connexion réussie');
@@ -49,6 +55,7 @@ class TahomaPortailPlatform {
       this.log.error('❌ Erreur de connexion :', err.response?.data || err.message);
     }
   }
+
 
 
   async loadDevices() {
