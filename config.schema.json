@@ -1,53 +1,36 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Tahoma Portail",
-  "type": "object",
-  "required": [
-    "platform",
-    "name",
-    "clientId",
-    "clientSecret",
-    "username",
-    "password"
-  ],
-  "properties": {
-    "platform": {
-      "type": "string",
-      "default": "TahomaPortail",
-      "description": "Nom de la plateforme Homebridge",
-      "enum": ["TahomaPortail"]
-    },
-    "name": {
-      "type": "string",
-      "default": "Tahoma Portail",
-      "description": "Nom affiché dans Homebridge"
-    },
-    "clientId": {
-      "type": "string",
-      "title": "Client ID",
-      "description": "Identifiant client OAuth2 fourni par Somfy"
-    },
-    "clientSecret": {
-      "type": "string",
-      "title": "Client Secret",
-      "description": "Secret client OAuth2 fourni par Somfy"
-    },
-    "username": {
-      "type": "string",
-      "title": "Adresse email Somfy",
-      "description": "Email utilisé pour se connecter à Somfy"
-    },
-    "password": {
-      "type": "string",
-      "title": "Mot de passe Somfy",
-      "description": "Mot de passe associé à votre compte Somfy",
-      "format": "password"
-    },
-    "deviceLabel": {
-      "type": "string",
-      "title": "Nom du portail",
-      "description": "Label du portail dans Somfy (par défaut 'portail')",
-      "default": "portail"
+  "pluginAlias": "TahomaPortail",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "platform": {
+        "type": "string",
+        "default": "TahomaPortail",
+        "readonly": true
+      },
+      "name": {
+        "type": "string",
+        "title": "Nom de la plateforme",
+        "default": "Tahoma Portail"
+      },
+      "username": {
+        "type": "string",
+        "title": "Email Somfy",
+        "required": true
+      },
+      "password": {
+        "type": "string",
+        "title": "Mot de passe",
+        "required": true,
+        "format": "password"
+      },
+      "deviceLabel": {
+        "type": "string",
+        "title": "Nom ou mot-clé du portail",
+        "default": "portail"
+      }
     }
   }
 }
