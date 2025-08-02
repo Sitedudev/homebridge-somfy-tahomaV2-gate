@@ -1,5 +1,5 @@
-const { TahomaPlatform } = require('./src/platform');
+const { TahomaPlatform } = require('./platform');
 
-module.exports = (homebridge) => {
-  homebridge.registerPlatform('homebridge-somfy-tahoma-portail', 'TahomaPortail', TahomaPlatform);
+module.exports = (api) => {
+  api.registerPlatform('TahomaPortail', TahomaPlatform);
 };
