@@ -15,6 +15,9 @@ class TahomaGateAccessory {
 
     this.service.getCharacteristic(Characteristic.CurrentDoorState)
       .onGet(this.getCurrentState.bind(this));
+
+    // Lancer la surveillance automatique de l’état
+    this.startPollingState();
   }
 
   async setTargetState(value) {
@@ -74,6 +77,59 @@ class TahomaGateAccessory {
       this.platform.log.error('Erreur lors de la récupération de l’état:', err.message);
       return 1; // FERMÉ par défaut si erreur
     }
+  }
+
+  startPollingState() {
+    this.pollingInterval = setInterval(async () => {
+      try {
+        const response = await axios.get(
+          'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/setup/devices',
+          {
+            headers: {
+              'Cookie': 'JSESSIONID=' + this.platform.session.cookie
+            }
+          }
+        );
+  
+        const device = response.data.find(
+          (dev) => dev.deviceURL === this.accessory.context.deviceURL
+        );
+  
+        if (!device) {
+          this.platform.log.error('Appareil non trouvé pour polling');
+          return;
+        }
+  
+        const state = device.states.find(
+          (s) => s.name === 'core:OpenClosedState' || s.name === 'core:OpenCloseState'
+        );
+  
+        if (!state) {
+          this.platform.log.warn('État de portail non disponible dans polling');
+          return;
+        }
+  
+        const currentState = state.value === 'open' ? 0 : 1;
+  
+        const Characteristic = this.platform.api.hap.Characteristic;
+  
+        this.service.updateCharacteristic(
+          Characteristic.CurrentDoorState,
+          currentState
+        );
+  
+        // Bonus : aussi mettre à jour le TargetDoorState si besoin
+        this.service.updateCharacteristic(
+          Characteristic.TargetDoorState,
+          currentState
+        );
+  
+        this.platform.log.debug(`Polling - état actuel : ${state.value}`);
+  
+      } catch (err) {
+        this.platform.log.error('Erreur polling état portail:', err.message);
+      }
+    }, 30000); // 30 secondes
   }
 }
 
