@@ -1,53 +1,31 @@
 class TahomaGateAccessory {
-  constructor(platform, accessory) {
+  constructor(platform, accessory, client) {
     this.platform = platform;
     this.accessory = accessory;
+    this.client = client;
     this.device = accessory.context.device;
 
-    const { Service, Characteristic } = platform.api.hap;
+    const service = accessory.getService(platform.api.hap.Service.Switch) ||
+      accessory.addService(platform.api.hap.Service.Switch);
 
-    this.service = accessory.getService(Service.GarageDoorOpener) || accessory.addService(Service.GarageDoorOpener);
-
-    this.service.setCharacteristic(Characteristic.Name, this.device.label);
-
-    this.service.getCharacteristic(Characteristic.CurrentDoorState)
-      .onGet(this.getCurrentState.bind(this));
-
-    this.service.getCharacteristic(Characteristic.TargetDoorState)
-      .onSet(this.setTargetState.bind(this));
+    service.getCharacteristic(platform.api.hap.Characteristic.On)
+      .onSet(this.setOn.bind(this))
+      .onGet(this.getOn.bind(this));
   }
 
-  async getCurrentState() {
+  async setOn(value) {
     try {
-      const { data } = await axios.get('https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/setup/devices', {
-        headers: { Cookie: `JSESSIONID=${this.platform.session.id}` }
-      });
-
-      const updatedDevice = data.find(d => d.deviceURL === this.device.deviceURL);
-      const state = updatedDevice.states.find(s => s.name === 'core:OpenClosedState');
-
-      return state.value === 'open' ? 0 : 1;
-    } catch (error) {
-      this.platform.log.error('❌ Erreur récupération état portail :', error.message);
-      return 1; // fermé par défaut en cas d'erreur
+      await this.client.executeCommand(this.device.deviceURL, [{
+        name: 'open',
+        parameters: []
+      }]);
+    } catch (e) {
+      this.platform.log.error('Erreur lors de l\'ouverture du portail:', e.message || e);
     }
   }
 
-  async setTargetState(value) {
-    const command = value === 0 ? 'open' : 'close';
-    try {
-      await axios.post('https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/exec/apply', {
-        label: `Homebridge - ${command} gate`,
-        actions: [{
-          deviceURL: this.device.deviceURL,
-          commands: [{ name: command, parameters: [] }]
-        }]
-      }, {
-        headers: { Cookie: `JSESSIONID=${this.platform.session.id}` }
-      });
-    } catch (error) {
-      this.platform.log.error(`❌ Erreur lors de la commande ${command} :`, error.message);
-    }
+  async getOn() {
+    return false; // Pas d’état récupérable facilement pour un portail
   }
 }
 
