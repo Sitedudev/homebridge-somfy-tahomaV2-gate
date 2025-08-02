@@ -10,28 +10,34 @@ class TahomaClient {
     this.refreshToken = null;
   }
 
-  async login() {
-    try {
-      console.log('🔐 Tentative de connexion à Tahoma...');
-      const res = await axios.post(`${BASE_URL}/login`, {
-        username: this.email,
-        password: this.password,
-      });
-      console.log('✅ Connexion réussie');
-      this.accessToken = res.data.access_token;
-      this.refreshToken = res.data.refresh_token;
-      return true;
-    } catch (e) {
-      if (e.response) {
-        console.error(`❌ Erreur HTTP ${e.response.status} :`, JSON.stringify(e.response.data, null, 2));
-      } else if (e.request) {
-        console.error('❌ Aucune réponse reçue de la box Tahoma :', e.message);
-      } else {
-        console.error('❌ Erreur inconnue :', e.message);
-      }
-      throw new Error('Erreur login Tahoma: ' + e.message);
-    }
+async login() {
+  console.log('🔐 [DEBUG] Début login()');
+  const loginUrl = `${BASE_URL}/login`;
+  console.log('🌐 [DEBUG] URL de login :', loginUrl);
+  console.log('👤 [DEBUG] Email utilisé :', this.email);
+
+  try {
+    const body = {
+      username: this.email,
+      password: this.password,
+    };
+    console.log('📤 [DEBUG] Données envoyées :', body);
+
+    const res = await axios.post(loginUrl, body);
+    console.log('✅ [DEBUG] Réponse reçue :', res.data);
+
+    this.accessToken = res.data.access_token;
+    this.refreshToken = res.data.refresh_token;
+    return true;
+  } catch (e) {
+    console.log('❌ [DEBUG] Une erreur est survenue');
+    console.log('📡 [DEBUG] Requête complète :', e.request?.res?.statusCode || 'inconnue');
+    console.log('📄 [DEBUG] Réponse erreur brute :', e.response?.data || 'aucune');
+    console.log('💥 [DEBUG] Message :', e.message);
+    throw e;
   }
+}
+
 
   async getDevices() {
     try {
