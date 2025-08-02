@@ -14,17 +14,19 @@ class TahomaPlatform {
     this.app = null;
     this.server = null;
 
+    this.devicesDiscovered = []; // <- Liste des portails découverts
+
     api.on('didFinishLaunching', () => this.init());
   }
 
   async init() {
     try {
+      // Connexion et récupération session
       const sessionResponse = await axios.post('https://ha101-1.overkiz.com/enduser-mobile-web/enduserSession', {
         userId: this.config.user,
         userPassword: this.config.password
       });
       
-      // Récupération de JSESSIONID dans cookie
       const setCookieHeader = sessionResponse.headers['set-cookie'] || [];
       const jsessionCookie = setCookieHeader.find(cookie => cookie.startsWith('JSESSIONID='));
       if (!jsessionCookie) {
@@ -35,7 +37,10 @@ class TahomaPlatform {
 
       this.log('Connexion à l’API Somfy réussie.');
 
-      // Ajouter les accessoires
+      // Découverte automatique des portails
+      await this.discoverDevices();
+
+      // Ajouter les accessoires configurés
       for (const device of this.config.devices) {
         this.addGateAccessory(device);
       }
@@ -49,6 +54,29 @@ class TahomaPlatform {
       }
     } catch (error) {
       this.log.error('Erreur de connexion à l\'API Somfy:', error.message);
+    }
+  }
+
+  async discoverDevices() {
+    try {
+      // Appel API pour récupérer la liste des devices
+      const url = 'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/enduserAPI.jsf';
+      const response = await axios.post(url, {}, {
+        headers: { Cookie: this.session }
+      });
+      const data = JSON.parse(response.data);
+      const devices = data.deviceList || [];
+
+      // Filtrer les portails (ex: deviceType contenant "gate")
+      this.devicesDiscovered = devices.filter(d => d.deviceType && d.deviceType.toLowerCase().includes('gate')).map(d => ({
+        name: d.label || d.name || 'Portail sans nom',
+        deviceURL: d.deviceURL,
+        deviceType: d.deviceType
+      }));
+
+      this.log(`Découverte automatique: ${this.devicesDiscovered.length} portail(s) trouvé(s).`);
+    } catch (err) {
+      this.log.error('Erreur lors de la découverte des portails:', err.message);
     }
   }
 
@@ -80,7 +108,7 @@ class TahomaPlatform {
     this.log(`Démarrage du polling global toutes les ${interval} ms`);
 
     this.pollingTimer = setInterval(() => this.updateAllStates(), interval);
-    // Lancer une première mise à jour immédiate
+    // Première mise à jour immédiate
     this.updateAllStates();
   }
 
@@ -97,11 +125,8 @@ class TahomaPlatform {
             : Characteristic.CurrentDoorState.CLOSED;
 
           service.updateCharacteristic(Characteristic.CurrentDoorState, newCurrentState);
-
-          // Synchroniser TargetDoorState aussi (optionnel)
           service.updateCharacteristic(Characteristic.TargetDoorState, newCurrentState);
 
-          // Mettre à jour le cache local dans gateAccessory (si besoin)
           if (accessory.updateCurrentState) {
             accessory.updateCurrentState(newCurrentState);
           }
@@ -120,28 +145,17 @@ class TahomaPlatform {
     try {
       const url = `https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/device/${encodeURIComponent(deviceURL)}/state`;
       const response = await axios.get(url, {
-        headers: {
-          Cookie: this.session
-        }
+        headers: { Cookie: this.session }
       });
 
-      // L’état réel dépend du champ retourné, à adapter selon la doc Somfy/Overkiz
-      // Exemple: rechercher dans response.data.states un état 'core:ClosureState' ou similaire
       const states = response.data.states || [];
       const closureState = states.find(s => s.name === 'core:ClosureState');
 
       if (closureState) {
-        // 'closed', 'open', 'closing', 'opening', 'stopped'
-        // On considère open = OPEN, tout le reste = CLOSED
-        if (closureState.value === 'open') {
-          return 'open';
-        } else {
-          return 'closed';
-        }
+        if (closureState.value === 'open') return 'open';
+        else return 'closed';
       }
-
       return null;
-
     } catch (err) {
       this.log.error(`Erreur getDeviceState pour ${deviceURL}:`, err.message);
       return null;
@@ -152,7 +166,10 @@ class TahomaPlatform {
     const port = this.config.webPort || 8999;
     this.app = express();
 
-    // Route principale affichant le status des portails
+    // Middleware pour parser le body des POST (formulaire)
+    this.app.use(express.urlencoded({ extended: true }));
+
+    // Page principale affichant état + liste portails découverts + bouton ajout manuel
     this.app.get('/', (req, res) => {
       const portails = this.accessories.map(acc => {
         const service = acc.getService(this.api.hap.Service.GarageDoorOpener);
@@ -165,23 +182,45 @@ class TahomaPlatform {
         };
       });
 
-      // Simple page HTML minimaliste
+      const discovered = this.devicesDiscovered.map(d => `<li>${d.name} - <code>${d.deviceURL}</code></li>`).join('');
+
       res.send(`
         <html><head><title>Etat portails Somfy</title></head><body>
           <h1>Etat des portails Somfy</h1>
           <ul>
             ${portails.map(p => `<li><strong>${p.name}</strong> : ${p.state}</li>`).join('')}
           </ul>
-          <form method="POST" action="/refresh">
-            <button type="submit">Forcer la mise à jour</button>
+
+          <h2>Portails découverts automatiquement</h2>
+          <ul>${discovered || '<li>Aucun portail trouvé</li>'}</ul>
+
+          <form method="POST" action="/addManual">
+            <h3>Ajouter un portail manuellement</h3>
+            <label>Nom: <input name="name" required></label><br>
+            <label>Device URL: <input name="deviceURL" required></label><br>
+            <button type="submit">Ajouter</button>
+          </form>
+
+          <form method="POST" action="/refresh" style="margin-top:20px;">
+            <button type="submit">Forcer la mise à jour des états</button>
           </form>
         </body></html>
       `);
     });
 
-    // Endpoint pour forcer la mise à jour
+    // Forcer mise à jour
     this.app.post('/refresh', (req, res) => {
       this.updateAllStates();
+      res.redirect('/');
+    });
+
+    // Ajouter portail manuel (rajoute dans accessories et log)
+    this.app.post('/addManual', (req, res) => {
+      const { name, deviceURL } = req.body;
+      if (name && deviceURL) {
+        this.addGateAccessory({ name, deviceURL });
+        this.log(`Portail ajouté manuellement via interface Web: ${name}`);
+      }
       res.redirect('/');
     });
 
@@ -190,10 +229,14 @@ class TahomaPlatform {
     });
   }
 
-  // Optionnel : arrête le serveur si besoin (à appeler si le plugin se décharge)
   stopWebServer() {
     if (this.server) {
       this.server.close();
       this.server = null;
       this.app = null;
-      this.log('Se
+      this.log('Serveur Web local arrêté.');
+    }
+  }
+}
+
+module.exports = { TahomaPlatform };
