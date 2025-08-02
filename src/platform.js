@@ -16,6 +16,45 @@ class TahomaPlatform {
 
     this.devicesDiscovered = []; // <- Liste des portails découverts
 
+    // Schéma JSON statique pour Homebridge Config UI
+    this.staticSchema = {
+      type: "object",
+      properties: {
+        user: { type: "string", title: "Somfy Email" },
+        password: { type: "string", title: "Somfy Password" },
+        pollingInterval: { type: "integer", title: "Intervalle de mise à jour (ms)", default: 30000 },
+        enableHistory: { type: "boolean", title: "Activer l'historique des actions", default: false },
+        enableWebUI: { type: "boolean", title: "Activer l'interface Web locale", default: false },
+        webPort: { type: "integer", title: "Port du serveur Web", default: 8999 },
+  
+        // Nouvelle propriété pour choisir le portail via la liste découverte
+        selectedDeviceURL: {
+          type: "string",
+          title: "Portail sélectionné",
+          enum: [],
+          enumNames: []
+        },
+  
+        devices: {
+          type: "array",
+          title: "Portails (ajout manuel)",
+          description: "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
+          items: {
+            type: "object",
+            title: "Portail",
+            properties: {
+              name: { type: "string", title: "Nom du portail" },
+              deviceURL: { type: "string", title: "Device URL du portail" }
+            },
+            required: ["name", "deviceURL"]
+          },
+          default: [],
+          widget: { addButtonLabel: "Ajouter un portail" }
+        }
+      },
+      required: ["user", "password"]
+    };
+
     api.on('didFinishLaunching', () => this.init());
   }
 
@@ -39,10 +78,19 @@ class TahomaPlatform {
 
       // Découverte automatique des portails
       await this.discoverDevices();
-
-      // Ajouter les accessoires configurés
-      for (const device of this.config.devices) {
-        this.addGateAccessory(device);
+      
+      if (this.config.selectedDeviceURL) {
+        const selectedDevice = this.devicesDiscovered.find(d => d.deviceURL === this.config.selectedDeviceURL);
+        if (selectedDevice) {
+          this.addGateAccessory(selectedDevice);
+        } else {
+          this.log.warn('Portail sélectionné non trouvé dans la liste découverte.');
+        }
+      } else {
+        // Sinon, on ajoute les portails configurés manuellement
+        for (const device of this.config.devices) {
+          this.addGateAccessory(device);
+        }
       }
 
       // Lancer le polling global
@@ -161,6 +209,23 @@ class TahomaPlatform {
       return null;
     }
   }
+
+  getSchema() {
+    // Clone pour éviter de modifier l'original
+    const schema = JSON.parse(JSON.stringify(this.staticSchema));
+  
+    // Remplit la liste déroulante des portails découverts
+    if (this.devicesDiscovered.length > 0) {
+      schema.properties.selectedDeviceURL.enum = this.devicesDiscovered.map(d => d.deviceURL);
+      schema.properties.selectedDeviceURL.enumNames = this.devicesDiscovered.map(d => d.name);
+    } else {
+      schema.properties.selectedDeviceURL.enum = [];
+      schema.properties.selectedDeviceURL.enumNames = [];
+    }
+  
+    return schema;
+  }
+
 
   startWebServer() {
     const port = this.config.webPort || 8999;
