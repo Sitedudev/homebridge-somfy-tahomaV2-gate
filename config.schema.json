@@ -85,7 +85,20 @@
       "title": "Liste des portails",
       "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
       "items": [
-        "devices"
+        {
+          "type": "array",
+          "field": "devices",
+          "addButtonText": "Ajouter un portail",
+          "items": {
+            "type": "section",
+            "title": "{{name}}",
+            "expandable": true,
+            "items": [
+              "devices[].name",
+              "devices[].deviceURL"
+            ]
+          }
+        }
       ]
     }
   ]
