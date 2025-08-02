@@ -29,10 +29,10 @@ class TahomaPortailPlatform {
   }
 
    async login() {
-    this.log('🔐 Connexion à Tahoma (ha101-1.overkiz.com)...');
+    this.log('🔐 Connexion à Tahoma (tahomalink.com)...');
     try {
       const res = await axios.post(
-        'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/login',
+        'https://www.tahomalink.com/enduser-mobile-web/enduserAPI/login',
         {
           userId: this.config.username,
           userPassword: this.config.password
@@ -50,13 +50,11 @@ class TahomaPortailPlatform {
   
       if (!this.sessionCookie) throw new Error('Pas de cookie de session');
   
-      this.log('✅ Connexion réussie');
+      this.log('✅ Connexion réussie à tahomalink.com');
     } catch (err) {
       this.log.error('❌ Erreur de connexion :', err.response?.data || err.message);
     }
   }
-
-
 
   async loadDevices() {
     if (!this.sessionCookie) return;
