@@ -3,93 +3,94 @@
   "pluginType": "platform",
   "schema": {
     "type": "object",
-    "properties": {      
-      "user": { "type": "string", "title": "Somfy Email" },
-      "password": { "type": "string", "title": "Somfy Password" },
+    "properties": {
+      "user": {
+        "type": "string",
+        "title": "Somfy Email"
+      },
+      "password": {
+        "type": "string",
+        "title": "Somfy Password"
+      },
       "pollingInterval": {
         "type": "integer",
-        "title": "Polling interval (ms)",
-        "default": 30000,
-        "description": "Fréquence de vérification de l’état du portail (en millisecondes)."
+        "title": "Intervalle de mise à jour (ms)",
+        "default": 30000
       },
       "enableHistory": {
-      "type": "boolean",
-      "title": "Activer l'historique des actions",
-      "default": false
-    },
-    "enableWebUI": {
-      "type": "boolean",
-      "title": "Activer l'interface Web locale",
-      "default": false
-    },
-    "webPort": {
-      "type": "integer",
-      "title": "Port du serveur Web",
-      "default": 8999
-    },
-    "devices": {
-      "type": "array",
-      "title": "Liste des portails",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string", "title": "Nom du portail" },
-          "deviceURL": { "type": "string", "title": "DeviceURL du portail" }
-        },
-        "required": ["name", "deviceURL"]
+        "type": "boolean",
+        "title": "Activer l'historique des actions",
+        "default": false
+      },
+      "enableWebUI": {
+        "type": "boolean",
+        "title": "Activer l'interface Web locale",
+        "default": false
+      },
+      "webPort": {
+        "type": "integer",
+        "title": "Port du serveur Web",
+        "default": 8999
+      },
+      "devices": {
+        "type": "array",
+        "title": "Liste des portails",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Nom du portail"
+            },
+            "deviceURL": {
+              "type": "string",
+              "title": "Device URL"
+            }
+          },
+          "required": ["name", "deviceURL"]
+        }
       }
-    }
-  }
+    },
+    "required": ["user", "password", "devices"]
+  },
   "layout": [
     {
       "type": "fieldset",
-      "title": "Paramètres principaux",
+      "title": "Paramètres de connexion",
       "expandable": true,
       "items": [
-        "name",
         "user",
-        "password",
-        {
-          "type": "fieldset",
-          "title": "Liste des portails",
-          "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
-          "items": [
-            {
-              "type": "array",
-              "items": {
-                "type": "section",
-                "title": "{{name}}",
-                "expandable": true,
-                "items": [
-                  "devices[].name",
-                  "devices[].deviceURL"
-                ]
-              },
-              "addButtonText": "Ajouter un portail"
-            }
-          ]
-        },
-        "pollingInterval"
+        "password"
       ]
     },
     {
       "type": "fieldset",
-      "title": "Actions manuelles",
+      "title": "Options générales",
+      "expandable": true,
       "items": [
-        {
-          "type": "button",
-          "title": "Forcer la mise à jour maintenant",
-          "action": "forceUpdate"
-        }
+        "pollingInterval",
+        "enableHistory",
+        "enableWebUI",
+        "webPort"
       ]
     },
     {
       "type": "fieldset",
-      "title": "Informations",
+      "title": "Liste des portails",
+      "description": "Ajoutez un ou plusieurs portails à contrôler via TaHoma.",
       "items": [
         {
-          "type": "paragraph",
-          "content": "Ce plugin Homebridge vous permet de contrôler un portail Somfy via la box TaHoma V2. Le plugin interroge l'état toutes les X secondes et peut être mis à jour manuellement avec le bouton ci-dessus."
+          "type": "array",
+          "items": {
+            "type": "section",
+            "title": "{{name}}",
+            "expandable": true,
+            "items": [
+              "devices[].name",
+              "devices[].deviceURL"
+            ]
+          },
+          "addButtonText": "Ajouter un portail"
         }
       ]
     }
