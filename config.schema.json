@@ -1,29 +1,53 @@
 {
-  "platforms": [
-    {
-      "platform": "TahomaPlatform",
-      "name": "Tahoma Portail",
-      "description": "Pilote ton portail Somfy via Tahoma V2",
-      "required": ["email", "password", "deviceLabel"],
-      "properties": {
-        "email": {
-          "title": "Email Somfy",
-          "type": "string",
-          "format": "email",
-          "default": ""
-        },
-        "password": {
-          "title": "Mot de passe Somfy",
-          "type": "string",
-          "format": "password",
-          "default": ""
-        },
-        "deviceLabel": {
-          "title": "Nom de l'appareil (portail)",
-          "type": "string",
-          "default": "portail"
-        }
-      }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tahoma Portail",
+  "type": "object",
+  "required": [
+    "platform",
+    "name",
+    "clientId",
+    "clientSecret",
+    "username",
+    "password"
+  ],
+  "properties": {
+    "platform": {
+      "type": "string",
+      "default": "TahomaPortail",
+      "description": "Nom de la plateforme Homebridge",
+      "enum": ["TahomaPortail"]
+    },
+    "name": {
+      "type": "string",
+      "default": "Tahoma Portail",
+      "description": "Nom affiché dans Homebridge"
+    },
+    "clientId": {
+      "type": "string",
+      "title": "Client ID",
+      "description": "Identifiant client OAuth2 fourni par Somfy"
+    },
+    "clientSecret": {
+      "type": "string",
+      "title": "Client Secret",
+      "description": "Secret client OAuth2 fourni par Somfy"
+    },
+    "username": {
+      "type": "string",
+      "title": "Adresse email Somfy",
+      "description": "Email utilisé pour se connecter à Somfy"
+    },
+    "password": {
+      "type": "string",
+      "title": "Mot de passe Somfy",
+      "description": "Mot de passe associé à votre compte Somfy",
+      "format": "password"
+    },
+    "deviceLabel": {
+      "type": "string",
+      "title": "Nom du portail",
+      "description": "Label du portail dans Somfy (par défaut 'portail')",
+      "default": "portail"
     }
-  ]
+  }
 }
