@@ -142,6 +142,54 @@ class TahomaGateAccessory {
       this.pollingInterval = null;
     }
   }
+
+  async forceUpdateState() {
+    const Characteristic = this.platform.api.hap.Characteristic;
+    try {
+      const response = await axios.get(
+        'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/setup/devices',
+        {
+          headers: {
+            'Cookie': 'JSESSIONID=' + this.platform.session.cookie
+          }
+        }
+      );
+  
+      const device = response.data.find(
+        (dev) => dev.deviceURL === this.accessory.context.deviceURL
+      );
+  
+      if (!device) {
+        this.platform.log.error('forceUpdate: appareil non trouvé.');
+        return;
+      }
+  
+      const state = device.states.find(
+        (s) => s.name === 'core:OpenClosedState' || s.name === 'core:OpenCloseState'
+      );
+  
+      if (!state) {
+        this.platform.log.warn('forceUpdate: état non trouvé.');
+        return;
+      }
+  
+      const currentState = state.value === 'open' ? 0 : 1;
+  
+      this.service.updateCharacteristic(
+        Characteristic.CurrentDoorState,
+        currentState
+      );
+      this.service.updateCharacteristic(
+        Characteristic.TargetDoorState,
+        currentState
+      );
+  
+      this.platform.log(`✅ forceUpdate: État actualisé à ${state.value}`);
+  
+    } catch (err) {
+      this.platform.log.error('forceUpdate: erreur API →', err.message);
+    }
+  }
 }
 
 module.exports = { TahomaGateAccessory };
