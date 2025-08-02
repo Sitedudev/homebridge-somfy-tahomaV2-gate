@@ -1,55 +1,73 @@
 const axios = require('axios');
-const { TahomaGateAccessory } = require('./gateAccessory');
 
-const BASE_URL = 'https://ha201-1.overkiz.com/enduser-mobile-web';
+class TahomaGateAccessory {
+  constructor(platform, accessory) {
+    this.platform = platform;
+    this.accessory = accessory;
+    this.deviceURL = accessory.context.deviceURL;
+    this.name = accessory.displayName;
 
-class TahomaPlatform {
-  constructor(log, config, api) {
-    this.log = log;
-    this.config = config;
-    this.api = api;
-    this.accessories = [];
-    this.sessionId = null;
+    const { Service, Characteristic } = platform.api.hap;
 
-    this.api.on('didFinishLaunching', () => {
-      this.log('[Tahoma Portail] Homebridge prêt, connexion à Tahoma...');
-      this.login();
-    });
+    this.service = accessory.getService(Service.GarageDoorOpener)
+      || accessory.addService(Service.GarageDoorOpener);
+
+    this.service.setCharacteristic(Characteristic.Name, this.name);
+
+    this.service.getCharacteristic(Characteristic.CurrentDoorState)
+      .onGet(this.handleCurrentDoorStateGet.bind(this));
+
+    this.service.getCharacteristic(Characteristic.TargetDoorState)
+      .onGet(this.handleTargetDoorStateGet.bind(this))
+      .onSet(this.handleTargetDoorStateSet.bind(this));
   }
 
-  async login() {
-    this.log('🔐 Connexion à Overkiz...');
+  async handleCurrentDoorStateGet() {
     try {
-      const response = await axios.post(`${BASE_URL}/enduserSession`, {
-        userId: this.config.username,
-        userPassword: this.config.password
-      });
+      const response = await axios.get(
+        `https://ha201-1.overkiz.com/enduser-mobile-web/enduserAPI/setup/devices/${this.deviceURL}/states`,
+        { headers: { Cookie: this.platform.sessionId } }
+      );
 
-      const cookies = response.headers['set-cookie'];
-      this.sessionId = cookies.find(c => c.startsWith('JSESSIONID=')).split(';')[0];
-
-      this.log('✅ Authentification réussie');
-      this.addGateAccessory();
+      const state = response.data.find(s => s.name === 'core:OpenClosedState');
+      return state.value === 'open' ? 0 : 1; // 0: OPEN, 1: CLOSED
     } catch (error) {
-      this.log.error('❌ Erreur de connexion :', error.response?.data || error.message);
+      this.platform.log.error('Erreur récupération état portail :', error.message);
+      return 1;
     }
   }
 
-  addGateAccessory() {
-    const uuid = this.api.hap.uuid.generate(this.config.deviceURL);
-    const existingAccessory = this.accessories.find(acc => acc.UUID === uuid);
-    if (existingAccessory) return;
-
-    const accessory = new this.api.platformAccessory('Portail Somfy', uuid);
-    accessory.context.deviceURL = this.config.deviceURL;
-
-    new TahomaGateAccessory(this, accessory);
-    this.api.registerPlatformAccessories('homebridge-somfy-tahoma-portail', 'TahomaPortail', [accessory]);
+  async handleTargetDoorStateGet() {
+    return this.handleCurrentDoorStateGet();
   }
 
-  configureAccessory(accessory) {
-    this.accessories.push(accessory);
+  async handleTargetDoorStateSet(value) {
+    const command = value === 0 ? 'open' : 'close';
+    try {
+      await axios.post(
+        'https://ha201-1.overkiz.com/enduser-mobile-web/enduserAPI/exec/apply',
+        {
+          label: 'Homebridge Command',
+          actions: [
+            {
+              deviceURL: this.deviceURL,
+              commands: [
+                {
+                  name: command,
+                  parameters: []
+                }
+              ]
+            }
+          ]
+        },
+        { headers: { Cookie: this.platform.sessionId } }
+      );
+
+      this.platform.log(`Commande portail : ${command}`);
+    } catch (error) {
+      this.platform.log.error('Erreur commande portail :', error.message);
+    }
   }
 }
 
-module.exports = { TahomaPlatform };
+module.exports = { TahomaGateAccessory };
