@@ -135,6 +135,13 @@ class TahomaGateAccessory {
       }
     }, interval); // Par défaut 30s mais peut être paramétré.
   }
+
+  stopPollingState() { // Pour nettoyer proporement le polling dans un futur (idée d'amélioration)
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+  }
 }
 
 module.exports = { TahomaGateAccessory };
