@@ -51,7 +51,12 @@
           },
           "required": ["name", "deviceURL"]
         },
-        "default": []
+        "default": [
+          {
+            "name": "",
+            "deviceURL": ""
+          }
+        ]
       }
     },
     "required": ["user", "password", "devices"]
