@@ -32,6 +32,11 @@
         "title": "Port du serveur Web",
         "default": 8999
       },
+      "enableHistory": {
+        "type": "boolean",
+        "title": "Activer historique des actions",
+        "default": false
+      },
       "devices": {
         "type": "array",
         "title": "Liste des portails",
