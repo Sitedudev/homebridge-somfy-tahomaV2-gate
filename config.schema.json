@@ -89,7 +89,7 @@
           "addButtonText": "Ajouter un portail",
           "items": {
             "type": "section",
-            "title": "{{name}}",
+            "title": "Portail",
             "expandable": true,
             "items": [
               "name",
