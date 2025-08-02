@@ -8,6 +8,12 @@
       "user": { "type": "string", "title": "Somfy Email" },
       "password": { "type": "string", "title": "Somfy Password" },
       "deviceURL": { "type": "string", "title": "Device URL of the Gate" }
+      "pollingInterval": {
+        "type": "integer",
+        "title": "Polling interval (ms)",
+        "default": 30000,
+        "description": "Fréquence de vérification de l’état du portail (en millisecondes)."
+      }
     },
     "required": ["user", "password", "deviceURL"]
   }
