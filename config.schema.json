@@ -40,6 +40,16 @@
           "action": "forceUpdate"
         }
       ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Informations",
+      "items": [
+        {
+          "type": "paragraph",
+          "content": "Ce plugin Homebridge vous permet de contrôler un portail Somfy via la box TaHoma V2. Le plugin interroge l'état toutes les X secondes et peut être mis à jour manuellement avec le bouton ci-dessus."
+        }
+      ]
     }
   ]
 }
