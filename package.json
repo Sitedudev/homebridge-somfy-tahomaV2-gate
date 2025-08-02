@@ -1,6 +1,6 @@
 {
   "name": "homebridge-somfy-tahoma-gate",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Plugin Homebridge pour contrôler un portail Somfy via TaHoma V2 (API Overkiz)",
   "main": "index.js",
   "keywords": ["homebridge-plugin", "tahoma", "somfy", "garage", "homekit"],
