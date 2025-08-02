@@ -19,6 +19,6 @@
   },
   "homepage": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate#readme",
   "dependencies": {
-    "tahoma-api": "^1.7.0"
+    "axios": "^1.0.0"
   }
 }
