@@ -5,43 +5,44 @@ class TahomaGateAccessory {
     this.platform = platform;
     this.accessory = accessory;
 
-    const Service = platform.api.hap.Service;
-    const Characteristic = platform.api.hap.Characteristic;
+    const Service = this.platform.api.hap.Service;
+    const Characteristic = this.platform.api.hap.Characteristic;
 
-    // Récupérer ou créer le service GarageDoorOpener
-    this.service = accessory.getService(Service.GarageDoorOpener)
-      || accessory.addService(Service.GarageDoorOpener);
+    console.log('GarageDoorOpener Service:', Service.GarageDoorOpener);
+    console.log('TargetDoorState Characteristic:', Characteristic.TargetDoorState);
+    console.log('CurrentDoorState Characteristic:', Characteristic.CurrentDoorState);
 
-    // Définir le nom de l’accessoire
+    // Supprimer service s'il existe (sécurité)
+    const existingService = accessory.getService(Service.GarageDoorOpener);
+    if (existingService) {
+      accessory.removeService(existingService);
+    }
+
+    this.service = accessory.addService(Service.GarageDoorOpener);
+
     this.service.setCharacteristic(Characteristic.Name, accessory.context.name);
 
-    // Initialiser les caractéristiques avec des valeurs valides
-    // CurrentDoorState: 0=Open, 1=Closed, 2=Opening, 3=Closing, 4=Stopped
     this.currentState = Characteristic.CurrentDoorState.CLOSED;
     this.targetState = Characteristic.TargetDoorState.CLOSED;
 
     this.service.setCharacteristic(Characteristic.CurrentDoorState, this.currentState);
     this.service.setCharacteristic(Characteristic.TargetDoorState, this.targetState);
 
-    // Bind des handlers sur TargetDoorState
     this.service.getCharacteristic(Characteristic.TargetDoorState)
-      .onSet(this.setTargetState.bind(this));
+      .on('set', this.setTargetState.bind(this));
 
     this.service.getCharacteristic(Characteristic.CurrentDoorState)
-      .onGet(this.getCurrentState.bind(this));
+      .on('get', this.getCurrentState.bind(this));
 
-    // Permet à la platform de mettre à jour l'état depuis le polling
     accessory.updateCurrentState = this.updateCurrentState.bind(this);
   }
 
-  async setTargetState(value) {
+  async setTargetState(value, callback) {
     const Characteristic = this.platform.api.hap.Characteristic;
 
-    // Convertir la valeur en commande Somfy (open/close)
-    const state = value === Characteristic.TargetDoorState.OPEN ? 'open' : 'close';
+    const state = (value === Characteristic.TargetDoorState.OPEN) ? 'open' : 'close';
 
     const url = 'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/exec/apply';
-
     const body = {
       label: 'Homebridge Command',
       actions: [{
@@ -56,7 +57,6 @@ class TahomaGateAccessory {
       });
       this.platform.log(`Commande "${state}" envoyée pour portail "${this.accessory.context.name}".`);
 
-      // Mise à jour optimiste des caractéristiques
       this.targetState = value;
       this.currentState = (value === Characteristic.TargetDoorState.OPEN)
         ? Characteristic.CurrentDoorState.OPEN
@@ -65,19 +65,20 @@ class TahomaGateAccessory {
       this.service.updateCharacteristic(Characteristic.TargetDoorState, this.targetState);
       this.service.updateCharacteristic(Characteristic.CurrentDoorState, this.currentState);
 
+      callback(null);
     } catch (err) {
       this.platform.log.error(`Erreur d’envoi de la commande pour portail "${this.accessory.context.name}" :`, err.message);
+      callback(err);
     }
   }
 
-  async getCurrentState() {
-    return this.currentState;
+  async getCurrentState(callback) {
+    callback(null, this.currentState);
   }
 
   updateCurrentState(newState) {
     const Characteristic = this.platform.api.hap.Characteristic;
 
-    // Validation de l’état avant mise à jour
     const validStates = [
       Characteristic.CurrentDoorState.OPEN,
       Characteristic.CurrentDoorState.CLOSED,
@@ -93,14 +94,12 @@ class TahomaGateAccessory {
 
     this.currentState = newState;
 
-    // Pour synchroniser TargetDoorState si on détecte ouverture ou fermeture complète
     if (newState === Characteristic.CurrentDoorState.OPEN) {
       this.targetState = Characteristic.TargetDoorState.OPEN;
     } else if (newState === Characteristic.CurrentDoorState.CLOSED) {
       this.targetState = Characteristic.TargetDoorState.CLOSED;
     }
 
-    // Mise à jour des caractéristiques HomeKit
     this.service.updateCharacteristic(Characteristic.CurrentDoorState, this.currentState);
     this.service.updateCharacteristic(Characteristic.TargetDoorState, this.targetState);
   }
