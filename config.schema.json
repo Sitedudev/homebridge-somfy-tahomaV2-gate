@@ -1,29 +1,36 @@
 {
-  "pluginAlias": "TahomaGate",
+  "pluginAlias": "TahomaPortail",
   "pluginType": "platform",
   "singular": true,
+  "header": "Configuration pour portail Somfy via Tahoma",
   "schema": {
     "type": "object",
     "properties": {
       "platform": {
         "type": "string",
-        "default": "TahomaGate",
+        "default": "TahomaPortail",
         "readonly": true
       },
-      "user": {
-        "title": "Email (Identifiant Somfy)",
-        "type": "string"
+      "name": {
+        "type": "string",
+        "title": "Nom de la plateforme",
+        "default": "Tahoma Portail"
+      },
+      "username": {
+        "type": "string",
+        "title": "Email du compte Somfy"
       },
       "password": {
-        "title": "Mot de passe Somfy",
         "type": "string",
+        "title": "Mot de passe",
         "format": "password"
       },
       "deviceURL": {
-        "title": "DeviceURL du portail",
-        "type": "string"
+        "type": "string",
+        "title": "deviceURL du portail",
+        "description": "Tu peux le récupérer avec un script de test ou dans les logs Homebridge"
       }
     },
-    "required": ["user", "password", "deviceURL"]
+    "required": ["username", "password", "deviceURL"]
   }
 }
