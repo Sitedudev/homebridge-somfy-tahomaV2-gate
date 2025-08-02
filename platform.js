@@ -17,10 +17,10 @@ class TahomaPlatform {
 
   async init() {
     try {
-      const response = await axios.post('https://ha101-1.overkiz.com/enduser-mobile-web/enduserSession', {
-        userId: this.config.username,
-        userPassword: this.config.password
-      });
+      const response = await axios.post(`https://somfy-europe.overkiz.com/enduser-mobile-web/enduserSession`, {
+      userId: this.config.user,
+      userPassword: this.config.password
+    });
 
       this.session = response.data;
       this.log('✅ Connexion réussie');
@@ -33,7 +33,7 @@ class TahomaPlatform {
 
   async loadDevices() {
     try {
-      const devicesResponse = await axios.get('https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/setup/devices', {
+      const devicesResponse = await axios.get('https://somfy-europe.overkiz.com/enduser-mobile-web/enduserAPI/setup/devices', {
         headers: {
           Cookie: `JSESSIONID=${this.session.id}`
         }
