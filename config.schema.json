@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "TahomaPortail",
+  "pluginAlias": "TahomaGate",
   "pluginType": "platform",
   "singular": true,
   "schema": {
@@ -7,30 +7,23 @@
     "properties": {
       "platform": {
         "type": "string",
-        "default": "TahomaPortail",
+        "default": "TahomaGate",
         "readonly": true
       },
-      "name": {
-        "type": "string",
-        "title": "Nom de la plateforme",
-        "default": "Tahoma Portail"
-      },
-      "username": {
-        "type": "string",
-        "title": "Email Somfy",
-        "required": true
+      "user": {
+        "title": "Email (Identifiant Somfy)",
+        "type": "string"
       },
       "password": {
+        "title": "Mot de passe Somfy",
         "type": "string",
-        "title": "Mot de passe",
-        "required": true,
         "format": "password"
       },
-      "deviceLabel": {
-        "type": "string",
-        "title": "Nom ou mot-clé du portail",
-        "default": "portail"
+      "deviceURL": {
+        "title": "DeviceURL du portail",
+        "type": "string"
       }
-    }
+    },
+    "required": ["user", "password", "deviceURL"]
   }
 }
