@@ -84,7 +84,7 @@
       "items": [
         {
           "type": "array",
-          "field": "devices",
+          "fieldName": "devices",
           "addButtonText": "Ajouter un portail",
           "items": {
             "type": "section",
