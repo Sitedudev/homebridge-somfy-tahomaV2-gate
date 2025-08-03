@@ -1,7 +1,7 @@
 {
-  "name": "homebridge-tahoma-gate",
+  "name": "homebridge-somfy-tahoma-gate",
   "displayName": "Homebridge TaHoma",
-  "version": "0.4.56",
+  "version": "0.4.71",
   "description": "Piloter portail",
   "author": "Rémy D",
   "license": "Apache-2.0",
