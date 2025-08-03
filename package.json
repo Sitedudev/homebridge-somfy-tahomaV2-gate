@@ -1,24 +1,51 @@
 {
-  "name": "homebridge-somfy-tahoma-gate",
-  "version": "0.4.7",
-  "description": "Plugin Homebridge pour contrôler un portail Somfy via TaHoma V2 (API Overkiz)",
-  "main": "index.js",
-  "keywords": ["homebridge-plugin", "tahoma", "somfy", "garage", "homekit"],
-  "engines": {
-    "node": ">=18.0.0",
-    "homebridge": ">=1.6.0"
-  },
+  "name": "homebridge-tahoma-gate",
+  "displayName": "Homebridge TaHoma",
+  "version": "0.4.56",
+  "description": "Piloter portail",
+  "author": "Rémy D",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate.git"
+    "url": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate"
   },
-  "author": "Rémy D.",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate/issues"
   },
-  "homepage": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate#readme",
+  "engines": {
+    "node": ">=12.4.0",
+    "homebridge": ">=1.3.0"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint src/**.ts",
+    "watch": "npm run build && npm link && nodemon",
+    "clean": "rimraf ./dist",
+    "build": "rimraf ./dist && tsc",
+    "prepublishOnly": "npm run lint && npm run build && npm version patch --m 'Release %s'",
+    "postpublish": "npm run clean"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "tahoma",
+    "cozytouch",
+    "somfy",
+    "connexoon"
+  ],
+  "homepage": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate",
   "dependencies": {
-    "axios": "^1.6.0"
+    "moment": "^2.30.1",
+    "overkiz-client": "^1.0.20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.7",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "eslint": "^9.14.0",
+    "homebridge": "^1.8.5",
+    "nodemon": "^3.1.7",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
   }
 }
