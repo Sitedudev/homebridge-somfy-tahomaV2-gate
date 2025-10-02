@@ -1,5 +1,4 @@
 let Service, Characteristic;
-
 const https = require('https');
 
 module.exports = (homebridge) => {
@@ -7,8 +6,8 @@ module.exports = (homebridge) => {
   Characteristic = homebridge.hap.Characteristic;
 
   homebridge.registerPlatform(
-    "homebridge-somfy-tahoma-v2-gate", // nom npm
-    "TahomaPortail",                    // nom platform dans config.json
+    "homebridge-somfy-tahoma-v2-gate",
+    "TahomaPortail",
     SomfyGatePlatform
   );
 };
@@ -59,34 +58,30 @@ class SomfyGatePlatform {
         // Stop
         const stopService = accessory.addService(Service.Switch, "Stop", "stopService");
         stopService.getCharacteristic(Characteristic.On).onSet(async (value) => {
-            if (value) {
-              try {
-                await this.callTahomAPI("stop");
-                this.log.info("[Portail] Commande envoyée : STOP");
-              } catch (err) {
-                this.log.error("Erreur Stop:", err);
-              }
-              setTimeout(() => {
-                stopService.updateCharacteristic(Characteristic.On, false);
-              }, 500);
+          if (value) {
+            try {
+              await this.callTahomAPI("stop");
+              this.log.info("[Portail] Commande envoyée : STOP");
+            } catch (err) {
+              this.log.error("Erreur Stop:", err);
             }
-          });
+            setTimeout(() => stopService.updateCharacteristic(Characteristic.On, false), 500);
+          }
+        });
 
         // Mode Piéton
         const pedestrianService = accessory.addService(Service.Switch, "Piéton", "pedestrianService");
         pedestrianService.getCharacteristic(Characteristic.On).onSet(async (value) => {
-            if (value) {setPedestrianPosition
-              try {
-                await this.callTahomAPI("setPedestrianPosition");
-                this.log.info("[Portail] Commande envoyée : PIÉTON");
-              } catch (err) {
-                this.log.error("Erreur Piéton:", err);
-              }
-              setTimeout(() => {
-                pedestrianService.updateCharacteristic(Characteristic.On, false);
-              }, 500);
+          if (value) {
+            try {
+              await this.callTahomAPI("setPedestrianPosition");
+              this.log.info("[Portail] Commande envoyée : PIÉTON");
+            } catch (err) {
+              this.log.error("Erreur Piéton:", err);
             }
-          });
+            setTimeout(() => pedestrianService.updateCharacteristic(Characteristic.On, false), 500);
+          }
+        });
 
         this.accessoriesList.push(accessory);
         this.api.registerPlatformAccessories("homebridge-somfy-tahoma-v2-gate", "TahomaPortail", [accessory]);
@@ -96,7 +91,7 @@ class SomfyGatePlatform {
           const state = await this.getState();
           garageService.updateCharacteristic(Characteristic.CurrentDoorState, state.currentDoorState);
         }, 3000);
-        
+
         // Logs toutes les 30 secondes
         setInterval(async () => {
           const state = await this.getState();
@@ -119,8 +114,7 @@ class SomfyGatePlatform {
               break;
           }
           this.log.info(`[Portail] État actuel : ${txtState}`);
-        }, 5000);
-        
+        }, 30000);
       });
     }
   }
@@ -132,23 +126,22 @@ class SomfyGatePlatform {
   async getState() {
     try {
       const devices = await this.callTahomAPI("getDevices");
-      let portalState = "closed";
+      let portalState = "unknown";
 
       for (const d of devices) {
         if (d.deviceURL === this.config.deviceURL) {
           const s = d.states.find(st => st.name === "core:OpenClosedPedestrianState");
           portalState = s ? s.value : "unknown";
-          if (this.config.debug) {
-            this.log(`[DEBUG] État brut portail: ${JSON.stringify(d.states)}`);
-          }
+          /*if (this.config.debug) {
+            this.log(`[DEBUG] État brut portail: ${portalState}`);
+          }*/
         }
       }
 
       let currentDoorState = Characteristic.CurrentDoorState.STOPPED;
       if (portalState === "closed") currentDoorState = Characteristic.CurrentDoorState.CLOSED;
       else if (portalState === "open" || portalState === "pedestrian") currentDoorState = Characteristic.CurrentDoorState.OPEN;
-      else currentDoorState = Characteristic.CurrentDoorState.STOPPED;
-  
+
       return { currentDoorState };
     } catch (err) {
       this.log.error("[TahomaPortail] Erreur getState:", err.message || err);
@@ -159,7 +152,7 @@ class SomfyGatePlatform {
   callTahomAPI(cmd) {
     return new Promise((resolve, reject) => {
       let options, postData;
-  
+
       if (cmd === "getDevices") {
         options = {
           hostname: this.config.ip.split(":")[0],
@@ -173,10 +166,10 @@ class SomfyGatePlatform {
         postData = JSON.stringify({
           actions: [{
             deviceURL: this.config.deviceURL,
-            commands: [{ name: cmd, parameters: cmd === "pedestrian" ? [50] : [] }]
+            commands: [{ name: cmd, parameters: cmd === "setPedestrianPosition" ? [50] : [] }]
           }]
         });
-  
+
         options = {
           hostname: this.config.ip.split(":")[0],
           port: parseInt(this.config.ip.split(":")[1]),
@@ -190,12 +183,12 @@ class SomfyGatePlatform {
           rejectUnauthorized: false
         };
       }
-  
+
       if (this.config.debug) {
         this.log(`[DEBUG] Appel API (${cmd}) avec options: ${JSON.stringify(options)}`);
         if (postData) this.log(`[DEBUG] Payload: ${postData}`);
       }
-  
+
       const req = https.request(options, (res) => {
         let data = "";
         res.on('data', (chunk) => data += chunk);
@@ -210,12 +203,12 @@ class SomfyGatePlatform {
           }
         });
       });
-  
+
       req.on('error', (err) => {
         this.log.error(`[TahomaPortail] Erreur réseau (${cmd}): ${err.message}`);
         reject(err);
       });
-  
+
       if (postData) req.write(postData);
       req.end();
     });
