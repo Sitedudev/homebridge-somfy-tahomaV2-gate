@@ -42,8 +42,8 @@ class SomfyGatePlatform {
       this.api.on('didFinishLaunching', async () => {
         this.log("Initialisation du plugin Tahoma Portail...");
         
+        // Si deviceURL n'est pas défini, on liste les portails et on ne crée pas l'accessoire
         if (!this.config.deviceURL) {
-        
           try {
             // Récupérer tous les devices
             const devices = await this.callTahomAPI("getDevices");
@@ -70,13 +70,9 @@ class SomfyGatePlatform {
           } catch (err) {
             this.log.error("Erreur lors de la récupération des devices:", err.message || err);
           }
+          return
         }
-        // Ensuite, seulement si deviceURL est défini, on crée l’accessoire
-        if (!this.config.deviceURL) {
-          this.log.info("DeviceURL non défini, arrêt de la création des accessoires.");
-          return;
-        }
-        
+
         const uuid = this.api.hap.uuid.generate(this.config.deviceURL);
         const accessory = new this.api.platformAccessory(this.config.name, uuid);
         
@@ -136,24 +132,16 @@ class SomfyGatePlatform {
         this.accessoriesList.push(accessory);
         this.api.registerPlatformAccessories("homebridge-somfy-tahoma-v2-gate", "TahomaPortail", [accessory]);
 
-        // Polling état toutes les 10 secondes
-        // setInterval(async () => {
-        //   const state = await this.getState();
-        //   garageService.updateCharacteristic(Characteristic.CurrentDoorState, state.currentDoorState);
-        // }, 10000);
-        
+        // Mise à jour de l'état toutes les 10s
         setInterval(async () => {
           const state = await this.getState();
-        
-          // Mise à jour CurrentDoorState
           garageService.updateCharacteristic(Characteristic.CurrentDoorState, state.currentDoorState);
-        
-          // Synchroniser TargetDoorState pour éviter que HomeKit reste bloqué
-          if (state.currentDoorState === Characteristic.CurrentDoorState.CLOSED) {
-              garageService.updateCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
-            } else if (state.currentDoorState === Characteristic.CurrentDoorState.OPEN) {
-              garageService.updateCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.OPEN);
-            }
+          garageService.updateCharacteristic(
+            Characteristic.TargetDoorState,
+            state.currentDoorState === Characteristic.CurrentDoorState.CLOSED
+              ? Characteristic.TargetDoorState.CLOSED
+              : Characteristic.TargetDoorState.OPEN
+          );
         }, 10000);
 
 
