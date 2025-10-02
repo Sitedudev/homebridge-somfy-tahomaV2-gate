@@ -1,5 +1,19 @@
 let Service, Characteristic;
 const https = require('https');
+// Codes ANSI simples
+const colors = {
+  reset: "\x1b[0m",
+  bright: "\x1b[1m",
+  dim: "\x1b[2m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m"
+};
+
 
 module.exports = (homebridge) => {
   Service = homebridge.hap.Service;
@@ -28,29 +42,35 @@ class SomfyGatePlatform {
       this.api.on('didFinishLaunching', async () => {
         this.log("Initialisation du plugin Tahoma Portail...");
         
-        try {
-          // Récupérer tous les devices
-          const devices = await this.callTahomAPI("getDevices");
+        if (!this.config.deviceURL) {
         
-          // Filtrer uniquement les portails
-          const portals = devices.filter(d =>
-            d.definition.widgetName.toLowerCase().includes("gate")
-          );
-        
-          if (portals.length === 0) {
-            this.log.warn("Aucun portail détecté sur votre box Tahoma. Vérifiez IP et token.");
-          } else {
+          try {
+            // Récupérer tous les devices
+            const devices = await this.callTahomAPI("getDevices");
+          
+            // Filtrer uniquement les portails
+            const portals = devices.filter(d =>
+              d.definition.widgetName.toLowerCase().includes("gate")
+            );
+          
+            if (portals.length === 0) {
+              this.log("[Portail] Aucun portail trouvé.");
+              return;
+            }
+            
             this.log.info("Portails détectés sur votre box Tahoma :");
-            portals.forEach((p, i) => {
+            
+            portals.forEach((d, i) => {
               const friendlyName = d.definition.label || d.definition.widgetName;
-              this.log.info(`${i + 1}. Nom: ${friendlyName}, deviceURL: ${p.deviceURL}`);
+              this.log(`${colors.green}[Portail] ${i + 1}. Nom: ${friendlyName}, deviceURL: ${d.deviceURL}`);
             });
-            this.log.info("Copiez le deviceURL du portail que vous souhaitez utiliser dans la configuration.");
+            
+            this.log.info(`${colors.magenta}Copiez le deviceURL du portail que vous souhaitez utiliser dans la configuration.`);
+            
+          } catch (err) {
+            this.log.error("Erreur lors de la récupération des devices:", err.message || err);
           }
-        } catch (err) {
-          this.log.error("Erreur lors de la récupération des devices:", err.message || err);
         }
-        
         // Ensuite, seulement si deviceURL est défini, on crée l’accessoire
         if (!this.config.deviceURL) {
           this.log.info("DeviceURL non défini, arrêt de la création des accessoires.");
@@ -74,10 +94,10 @@ class SomfyGatePlatform {
           try {
             if (value === Characteristic.TargetDoorState.OPEN) {
               await this.callTahomAPI("open");
-              this.log.info("[Portail] Commande envoyée : OUVERTURE");
+              this.log.info(`${colors.green}[Portail] Commande envoyée : OUVERTURE`);
             } else {
               await this.callTahomAPI("close");
-              this.log.info("[Portail] Commande envoyée : FERMETURE");
+              this.log.info(`${colors.green}[Portail] Commande envoyée : FERMETURE`);
             }
           } catch (err) {
             this.log.error("Erreur TargetDoorState:", err);
