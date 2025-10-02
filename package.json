@@ -1,12 +1,11 @@
 {
   "name": "homebridge-somfy-tahoma-gate",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "description": "Homebridge plugin pour piloter un portail Somfy Elixo 3S io via box Tahoma locale",
   "main": "index.js",
   "engines": {
     "homebridge": ">=1.8.0"
   },
-  "releaseNotes": "Découverte des devices de type 'Portail' afin de renseigner DeviceURL",
   "keywords": [
     "homebridge-plugin",
     "somfy",
@@ -16,9 +15,13 @@
   ],
   "author": "Rémy D",
   "license": "MIT",
+  "homepage": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TonNom/homebridge-somfy-tahomaV2-gate.git"
+    "url": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate"
+  },
+  "bugs": {
+    "url": "https://github.com/Sitedudev/homebridge-somfy-tahomaV2-gate/issues"
   },
   "platforms": [
     {

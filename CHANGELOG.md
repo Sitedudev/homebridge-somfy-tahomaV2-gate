@@ -1,5 +1,5 @@
-## 2.2.54 (2022-12-20)
+## 1.0.24 (2025-10-03)
 
 ### Bug Fixes
 
-* Fix nodejs compatibility to node v12.4.0
+* Fix a problem with synchro to add accessory
