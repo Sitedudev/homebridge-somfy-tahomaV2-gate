@@ -33,7 +33,7 @@ class SomfyGatePlatform {
 
         // GarageDoor principal
         const garageService = accessory.getService(Service.GarageDoorOpener) ||
-                              accessory.addService(Service.GarageDoorOpener);
+                              accessory.addService(Service.GarageDoorOpener, this.config.name);
 
         garageService.getCharacteristic(Characteristic.CurrentDoorState).onGet(async () => {
           const state = await this.getState();
@@ -54,23 +54,24 @@ class SomfyGatePlatform {
             this.log.error("Erreur TargetDoorState:", err);
           }
         });
-/*
-        // Stop
-        const stopService = accessory.getService("Stop") || accessory.addService(Service.Switch, "Stop", "stopService");
-        stopService.getCharacteristic(Characteristic.On).onSet(async (value) => {
-          if (value) {
-            try {
-              await this.callTahomAPI("stop");
-              this.log.info("[Portail] Commande envoyée : STOP");
-            } catch (err) {
-              this.log.error("Erreur Stop:", err);
-            }
-            setTimeout(() => stopService.updateCharacteristic(Characteristic.On, false), 500);
-          }
-        });
+
+        // // Stop
+        // const stopService = accessory.addService(Service.Switch, "Stop Portail", "stopService");
+        // stopService.getCharacteristic(Characteristic.On).onSet(async (value) => {
+        //   if (value) {
+        //     try {
+        //       await this.callTahomAPI("stop");
+        //       this.log.info("[Portail] Commande envoyée : STOP");
+        //     } catch (err) {
+        //       this.log.error("Erreur Stop:", err);
+        //     }
+        //     setTimeout(() => stopService.updateCharacteristic(Characteristic.On, false), 500);
+        //   }
+        // });
 
         // Mode Piéton
-        const pedestrianService = accessory.getService("Piéton") || accessory.addService(Service.Switch, "Piéton", "pedestrianService");
+        //const pedestrianService = accessory.getServiceById(Service.Switch, "pedestrianService") || accessory.addService(Service.Switch, "Piéton", "pedestrianService");        
+        const pedestrianService = accessory.addService(Service.Switch, "Mode Piéton", "pedestrianService");
         pedestrianService.getCharacteristic(Characteristic.On).onSet(async (value) => {
           if (value) {
             try {
@@ -81,62 +82,39 @@ class SomfyGatePlatform {
             }
             setTimeout(() => pedestrianService.updateCharacteristic(Characteristic.On, false), 500);
           }
-        });*/
+        });
         
-        // Mode Piéton
-        const pedestrianService = accessory.getService("Piéton") ||
-          accessory.addService(Service.StatelessProgrammableSwitch, "Piéton", "pedestrianService");
-        
-        pedestrianService
-          .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
-          .on('set', async (value, callback) => {
-            try {
-              await this.callTahomAPI("setPedestrianPosition");
-              this.log.info("[Portail] Commande envoyée : PIÉTON");
-            } catch (err) {
-              this.log.error("Erreur Piéton:", err);
-            }
-            callback();
-          });
-        
-        // Stop
-        const stopService = accessory.getService("Stop") ||
-          accessory.addService(Service.StatelessProgrammableSwitch, "Stop", "stopService");
-        
-        stopService
-          .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
-          .on('set', async (value, callback) => {
-            try {
-              await this.callTahomAPI("stop");
-              this.log.info("[Portail] Commande envoyée : STOP");
-            } catch (err) {
-              this.log.error("Erreur Stop:", err);
-            }
-            callback();
-          });
-
-
         this.accessoriesList.push(accessory);
         this.api.registerPlatformAccessories("homebridge-somfy-tahoma-v2-gate", "TahomaPortail", [accessory]);
 
         // Polling état toutes les 10 secondes
+        // setInterval(async () => {
+        //   const state = await this.getState();
+        //   garageService.updateCharacteristic(Characteristic.CurrentDoorState, state.currentDoorState);
+        // }, 10000);
+        
         setInterval(async () => {
           const state = await this.getState();
+        
+          // Mise à jour CurrentDoorState
           garageService.updateCharacteristic(Characteristic.CurrentDoorState, state.currentDoorState);
+        
+          // Synchroniser TargetDoorState pour éviter que HomeKit reste bloqué
+          if (state.currentDoorState === Characteristic.CurrentDoorState.CLOSED) {
+              garageService.updateCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.CLOSED);
+            } else if (state.currentDoorState === Characteristic.CurrentDoorState.OPEN) {
+              garageService.updateCharacteristic(Characteristic.TargetDoorState, Characteristic.TargetDoorState.OPEN);
+            }
         }, 10000);
+
 
         // Logs toutes les 30 secondes
         if (this.config.logState !== false) {
           
-          // Si logInterval est défini dans config.json, on l’utilise (en secondes si <1000, sinon en ms)
-          let interval = this.config.logInterval || 30000;
-          
-          // Si l’utilisateur a mis un petit nombre (<1000), on considère que c’est en secondes
-          if (interval < 1000) interval = interval * 1000;
-          
-          // Limiter intervalle entre 5s et 5min
-          if (interval < 5000) interval = 5000;
-          if (interval > 300000) interval = 300000;// permettre "30" pour 30s
+          let interval = this.config.logInterval || 30; // secondes
+          if (interval < 5) interval = 5;
+          if (interval > 300) interval = 300;
+          interval = interval * 1000;
           
           this.log.info(`[TahomaPortail] Logs d’état activés toutes les ${interval/1000}s`);
 
@@ -180,14 +158,11 @@ class SomfyGatePlatform {
         if (d.deviceURL === this.config.deviceURL) {
           const s = d.states.find(st => st.name === "core:OpenClosedPedestrianState");
           portalState = s ? s.value : "unknown";
-  
-          /*if (this.config.debug) {
-            this.log(`[DEBUG] État brut portail: ${JSON.stringify(d.states)}`);
-          }*/
         }
       }
   
-      let currentDoorState = Characteristic.CurrentDoorState.STOPPED;
+      //let currentDoorState = Characteristic.CurrentDoorState.STOPPED;
+      let currentDoorState = Characteristic.CurrentDoorState.CLOSED;
   
       switch (portalState) {
         case "closed":
@@ -229,11 +204,17 @@ class SomfyGatePlatform {
         };
       } else {
         postData = JSON.stringify({
-          actions: [{
-            deviceURL: this.config.deviceURL,
-            commands: [{ name: cmd, parameters: cmd === "setPedestrianPosition" ? [] : [] }]
+          actions: [{ 
+            deviceURL: this.config.deviceURL, 
+            commands: [{ name: cmd, parameters: [] }] 
           }]
         });
+        // postData = JSON.stringify({
+        //   actions: [{
+        //     deviceURL: this.config.deviceURL,
+        //     commands: [{ name: cmd, parameters: cmd === "setPedestrianPosition" ? [] : [] }]
+        //   }]
+        // });
 
         options = {
           hostname: this.config.ip.split(":")[0],
@@ -253,21 +234,12 @@ class SomfyGatePlatform {
         let data = "";
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
-          try {
-            const parsed = JSON.parse(data);
-            resolve(parsed);
-          } catch (e) {
-            this.log.error("[TahomaPortail] Erreur parsing JSON:", e.message);
-            reject(e);
-          }
+          try { resolve(JSON.parse(data)); }
+          catch (e) { this.log.error("[TahomaPortail] Erreur parsing JSON:", e.message); reject(e); }
         });
       });
-
-      req.on('error', (err) => {
-        this.log.error(`[TahomaPortail] Erreur réseau (${cmd}): ${err.message}`);
-        reject(err);
-      });
-
+      
+      req.on('error', (err) => { this.log.error(`[TahomaPortail] Erreur réseau (${cmd}): ${err.message}`); reject(err); });
       if (postData) req.write(postData);
       req.end();
     });

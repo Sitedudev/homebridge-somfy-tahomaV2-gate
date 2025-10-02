@@ -1,11 +1,12 @@
 {
   "name": "homebridge-somfy-tahoma-gate",
-  "version": "0.4.98",
+  "version": "1.0.2",
   "description": "Homebridge plugin pour piloter un portail Somfy Elixo 3S io via box Tahoma locale",
   "main": "index.js",
   "engines": {
     "homebridge": ">=1.8.0"
   },
+  "releaseNotes": "Correction bug Piéton / Stop et ajout logs d'état paramétrables via l'UI",
   "keywords": [
     "homebridge-plugin",
     "somfy",
