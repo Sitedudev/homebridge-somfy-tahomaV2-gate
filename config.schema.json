@@ -36,12 +36,9 @@
         "default": 30,
         "minimum": 5,
         "maximum": 300,
-        "description": "Définissez toutes les combien de secondes afficher l'état du portail",
-        "visibleIf": {
-          "logState": true
-        }
+        "description": "Définissez toutes les combien de secondes afficher l'état du portail (utilisé uniquement si 'Activer les logs' est activé"
       }
     },
-    "required": ["ip", "token", "deviceURL"]
+    "required": ["ip", "token"]
   }
 }

@@ -19,18 +19,47 @@ class SomfyGatePlatform {
     this.api = api;
     this.accessoriesList = [];
 
-    if (!config.ip || !config.token || !config.deviceURL) {
-      this.log.error("Merci de remplir IP, token et deviceURL dans la config.");
+    if (!config.ip || !config.token){
+      this.log.error("Merci de remplir l'adresse IP et le token dans la config.");
       return;
     }
 
     if (api) {
       this.api.on('didFinishLaunching', async () => {
-        this.log("Création de l'accessoire portail...");
-
+        this.log("Initialisation du plugin Tahoma Portail...");
+        
+        try {
+          // Récupérer tous les devices
+          const devices = await this.callTahomAPI("getDevices");
+        
+          // Filtrer uniquement les portails
+          const portals = devices.filter(d =>
+            d.definition.widgetName.toLowerCase().includes("gate")
+          );
+        
+          if (portals.length === 0) {
+            this.log.warn("Aucun portail détecté sur votre box Tahoma. Vérifiez IP et token.");
+          } else {
+            this.log.info("Portails détectés sur votre box Tahoma :");
+            portals.forEach((p, i) => {
+              const friendlyName = d.definition.label || d.definition.widgetName;
+              this.log.info(`${i + 1}. Nom: ${friendlyName}, deviceURL: ${p.deviceURL}`);
+            });
+            this.log.info("Copiez le deviceURL du portail que vous souhaitez utiliser dans la configuration.");
+          }
+        } catch (err) {
+          this.log.error("Erreur lors de la récupération des devices:", err.message || err);
+        }
+        
+        // Ensuite, seulement si deviceURL est défini, on crée l’accessoire
+        if (!this.config.deviceURL) {
+          this.log.info("DeviceURL non défini, arrêt de la création des accessoires.");
+          return;
+        }
+        
         const uuid = this.api.hap.uuid.generate(this.config.deviceURL);
         const accessory = new this.api.platformAccessory(this.config.name, uuid);
-
+        
         // GarageDoor principal
         const garageService = accessory.getService(Service.GarageDoorOpener) ||
                               accessory.addService(Service.GarageDoorOpener, this.config.name);
