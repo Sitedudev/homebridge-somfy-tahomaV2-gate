@@ -25,10 +25,21 @@
         "type": "string",
         "placeholder": "io://1234-4567-8901/12345678"
       },
-      "debug": {
-        "title": "Activer le mode debug",
+      "logState": {
+        "title": "Activer les logs d'état",
         "type": "boolean",
         "default": false
+      },
+      "logInterval": {
+        "title": "Intervalle des logs (secondes)",
+        "type": "number",
+        "default": 30,
+        "minimum": 5,
+        "maximum": 300,
+        "description": "Définissez toutes les combien de secondes afficher l'état du portail",
+        "visibleIf": {
+          "logState": true
+        }
       }
     },
     "required": ["ip", "token", "deviceURL"]

@@ -54,9 +54,9 @@ class SomfyGatePlatform {
             this.log.error("Erreur TargetDoorState:", err);
           }
         });
-
+/*
         // Stop
-        const stopService = accessory.addService(Service.Switch, "Stop", "stopService");
+        const stopService = accessory.getService("Stop") || accessory.addService(Service.Switch, "Stop", "stopService");
         stopService.getCharacteristic(Characteristic.On).onSet(async (value) => {
           if (value) {
             try {
@@ -70,7 +70,7 @@ class SomfyGatePlatform {
         });
 
         // Mode Piéton
-        const pedestrianService = accessory.addService(Service.Switch, "Piéton", "pedestrianService");
+        const pedestrianService = accessory.getService("Piéton") || accessory.addService(Service.Switch, "Piéton", "pedestrianService");
         pedestrianService.getCharacteristic(Characteristic.On).onSet(async (value) => {
           if (value) {
             try {
@@ -81,40 +81,88 @@ class SomfyGatePlatform {
             }
             setTimeout(() => pedestrianService.updateCharacteristic(Characteristic.On, false), 500);
           }
-        });
+        });*/
+        
+        // Mode Piéton
+        const pedestrianService = accessory.getService("Piéton") ||
+          accessory.addService(Service.StatelessProgrammableSwitch, "Piéton", "pedestrianService");
+        
+        pedestrianService
+          .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
+          .on('set', async (value, callback) => {
+            try {
+              await this.callTahomAPI("setPedestrianPosition");
+              this.log.info("[Portail] Commande envoyée : PIÉTON");
+            } catch (err) {
+              this.log.error("Erreur Piéton:", err);
+            }
+            callback();
+          });
+        
+        // Stop
+        const stopService = accessory.getService("Stop") ||
+          accessory.addService(Service.StatelessProgrammableSwitch, "Stop", "stopService");
+        
+        stopService
+          .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
+          .on('set', async (value, callback) => {
+            try {
+              await this.callTahomAPI("stop");
+              this.log.info("[Portail] Commande envoyée : STOP");
+            } catch (err) {
+              this.log.error("Erreur Stop:", err);
+            }
+            callback();
+          });
+
 
         this.accessoriesList.push(accessory);
         this.api.registerPlatformAccessories("homebridge-somfy-tahoma-v2-gate", "TahomaPortail", [accessory]);
 
-        // Polling état toutes les 3 secondes
+        // Polling état toutes les 10 secondes
         setInterval(async () => {
           const state = await this.getState();
           garageService.updateCharacteristic(Characteristic.CurrentDoorState, state.currentDoorState);
-        }, 3000);
+        }, 10000);
 
         // Logs toutes les 30 secondes
-        setInterval(async () => {
-          const state = await this.getState();
-          let txtState = "Inconnu";
-          switch (state.currentDoorState) {
-            case Characteristic.CurrentDoorState.CLOSED:
-              txtState = "Fermé";
-              break;
-            case Characteristic.CurrentDoorState.OPEN:
-              txtState = "Ouvert";
-              break;
-            case Characteristic.CurrentDoorState.STOPPED:
-              txtState = "Arrêté / Inconnu";
-              break;
-            case Characteristic.CurrentDoorState.OPENING:
-              txtState = "Ouverture en cours";
-              break;
-            case Characteristic.CurrentDoorState.CLOSING:
-              txtState = "Fermeture en cours";
-              break;
-          }
-          this.log.info(`[Portail] État actuel : ${txtState}`);
-        }, 30000);
+        if (this.config.logState !== false) {
+          
+          // Si logInterval est défini dans config.json, on l’utilise (en secondes si <1000, sinon en ms)
+          let interval = this.config.logInterval || 30000;
+          
+          // Si l’utilisateur a mis un petit nombre (<1000), on considère que c’est en secondes
+          if (interval < 1000) interval = interval * 1000;
+          
+          // Limiter intervalle entre 5s et 5min
+          if (interval < 5000) interval = 5000;
+          if (interval > 300000) interval = 300000;// permettre "30" pour 30s
+          
+          this.log.info(`[TahomaPortail] Logs d’état activés toutes les ${interval/1000}s`);
+
+          setInterval(async () => {
+            const state = await this.getState();
+            let txtState = "Inconnu";
+            switch (state.currentDoorState) {
+              case Characteristic.CurrentDoorState.CLOSED:
+                txtState = "Fermé";
+                break;
+              case Characteristic.CurrentDoorState.OPEN:
+                txtState = "Ouvert";
+                break;
+              case Characteristic.CurrentDoorState.STOPPED:
+                txtState = "Arrêté / Inconnu";
+                break;
+              case Characteristic.CurrentDoorState.OPENING:
+                txtState = "Ouverture en cours";
+                break;
+              case Characteristic.CurrentDoorState.CLOSING:
+                txtState = "Fermeture en cours";
+                break;
+            }
+            this.log.info(`[Portail] État actuel : ${txtState}`);
+          }, interval);
+        }
       });
     }
   }
@@ -122,32 +170,49 @@ class SomfyGatePlatform {
   accessories(callback) {
     callback(this.accessoriesList);
   }
-
+ 
   async getState() {
     try {
       const devices = await this.callTahomAPI("getDevices");
       let portalState = "unknown";
-
+  
       for (const d of devices) {
         if (d.deviceURL === this.config.deviceURL) {
           const s = d.states.find(st => st.name === "core:OpenClosedPedestrianState");
           portalState = s ? s.value : "unknown";
+  
           /*if (this.config.debug) {
-            this.log(`[DEBUG] État brut portail: ${portalState}`);
+            this.log(`[DEBUG] État brut portail: ${JSON.stringify(d.states)}`);
           }*/
         }
       }
-
+  
       let currentDoorState = Characteristic.CurrentDoorState.STOPPED;
-      if (portalState === "closed") currentDoorState = Characteristic.CurrentDoorState.CLOSED;
-      else if (portalState === "open" || portalState === "pedestrian") currentDoorState = Characteristic.CurrentDoorState.OPEN;
-
+  
+      switch (portalState) {
+        case "closed":
+          currentDoorState = Characteristic.CurrentDoorState.CLOSED;
+          break;
+        case "open":
+          currentDoorState = Characteristic.CurrentDoorState.OPEN;
+          break;
+        case "pedestrian":
+          // Pour HomeKit, on peut choisir OPEN ou STOPPED selon ton usage
+          currentDoorState = Characteristic.CurrentDoorState.OPEN;
+          break;
+        default:
+          // valeurs inconnues ou arrêt intermédiaire
+          currentDoorState = Characteristic.CurrentDoorState.OPEN;
+          break;
+      }
+  
       return { currentDoorState };
     } catch (err) {
       this.log.error("[TahomaPortail] Erreur getState:", err.message || err);
       return { currentDoorState: Characteristic.CurrentDoorState.STOPPED };
     }
   }
+
 
   callTahomAPI(cmd) {
     return new Promise((resolve, reject) => {
@@ -166,7 +231,7 @@ class SomfyGatePlatform {
         postData = JSON.stringify({
           actions: [{
             deviceURL: this.config.deviceURL,
-            commands: [{ name: cmd, parameters: cmd === "setPedestrianPosition" ? [50] : [] }]
+            commands: [{ name: cmd, parameters: cmd === "setPedestrianPosition" ? [] : [] }]
           }]
         });
 
@@ -184,18 +249,12 @@ class SomfyGatePlatform {
         };
       }
 
-      if (this.config.debug) {
-        this.log(`[DEBUG] Appel API (${cmd}) avec options: ${JSON.stringify(options)}`);
-        if (postData) this.log(`[DEBUG] Payload: ${postData}`);
-      }
-
       const req = https.request(options, (res) => {
         let data = "";
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
           try {
             const parsed = JSON.parse(data);
-            if (this.config.debug) this.log(`[DEBUG] Réponse API: ${data}`);
             resolve(parsed);
           } catch (e) {
             this.log.error("[TahomaPortail] Erreur parsing JSON:", e.message);
