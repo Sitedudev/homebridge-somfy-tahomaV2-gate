@@ -22,8 +22,7 @@ module.exports = (homebridge) => {
   homebridge.registerPlatform(
     "homebridge-somfy-tahoma-v2-gate",
     "TahomaPortail",
-    SomfyGatePlatform,
-    true
+    SomfyGatePlatform
   );
 };
 
@@ -183,9 +182,9 @@ class SomfyGatePlatform {
     }
   }
 
-  // accessories(callback) {
-  //   callback(this.accessoriesList);
-  // }
+  accessories(callback) {
+    callback(this.accessoriesList);
+  }
  
   async getState() {
     try {
