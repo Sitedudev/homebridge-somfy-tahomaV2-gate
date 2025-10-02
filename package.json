@@ -6,7 +6,8 @@
   "engines": {
     "homebridge": ">=1.8.0"
   },
-  "releaseNotes": "Correction bug Piéton / Stop et ajout logs d'état paramétrables via l'UI",
+  "releaseNotes": "Correction bug Piéton / Stop\nAjout logs d'état paramétrables via l'UI"
+",
   "keywords": [
     "homebridge-plugin",
     "somfy",
