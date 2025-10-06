@@ -1,5 +1,5 @@
-## 1.0.24 (2025-10-03)
+## 1.1.0 (2025-10-06)
 
 ### Bug Fixes
 
-* Fix a problem with synchro to add accessory
+* Fix un problème de retour d'état dans HomeKit si on utilise un accessoire (télécommande, etc.)

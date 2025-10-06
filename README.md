@@ -65,7 +65,6 @@ Exemple `config.json` :
 
 * **Portail** : Service principal `GarageDoorOpener`.
 * **Piéton** : Service `Switch` pour activer le mode piéton.
-* **Stop** : Service `Switch` pour arrêter le portail (optionnel).
 
 ---
 
@@ -92,6 +91,8 @@ Exemple :
 ## Version
 
 * 1.0.2 : Correction bug Piéton / Stop et ajout logs d’état paramétrables via l’UI.
+* 1.0.9 : Meilleur gestion des notifications
+* 1.1.0 : Fix un problème de retour d'état dans HomeKit si on utilise un accessoire (télécommande, etc.)
 
 ---
 

@@ -217,52 +217,34 @@ class SomfyGatePlatform {
 
     this.pollingTimer = setInterval(async () => {
       try {
-        const devices = await this.callTahomAPI("getDevices");
-        let portal = devices.find(d => d.deviceURL === this.config.deviceURL);
-        if (!portal) return;
-
-        const stateVal = portal.states.find(st => st.name === "core:OpenClosedPedestrianState")?.value || "unknown";
-
-        const currentDoorState = this.portalStateToHomeKit(stateVal);
-
-        // Si execId en cours, vérifier si l'état réel correspond toujours à l'exécution
-        if (this.currentExecId) {
-          const exec = portal.executions?.find(e => e.execId === this.currentExecId);
-          if (!exec || exec.status !== "IN_PROGRESS" || (currentDoorState !== Characteristic.CurrentDoorState.OPENING && currentDoorState !== Characteristic.CurrentDoorState.CLOSING)) {
-            this.currentExecId = null;
-          }
-        }
-
-        // Met à jour le switch piéton selon l'état réel
-        pedestrianService.updateCharacteristic(
-          Characteristic.On,
-          stateVal === "pedestrian"
-        );
-
-        // MAJ des caratéristiques HomeKit (retour d'état pour le bouton Portail)
-        garageService.updateCharacteristic(Characteristic.CurrentDoorState, currentDoorState);
-
-        // TargetDoorState = état souhaité réel
-        let targetDoorState;
-        switch(currentDoorState){
-          case Characteristic.CurrentDoorState.OPEN:
-            targetDoorState = Characteristic.TargetDoorState.OPEN; break;
-          case Characteristic.CurrentDoorState.CLOSED:
-            targetDoorState = Characteristic.TargetDoorState.CLOSED; break;
-          default:
-            // On garde le target précédent si STOPPED ou UNKNOWN
-            targetDoorState = garageService.getCharacteristic(Characteristic.TargetDoorState).value;
-        }
-
-        garageService.updateCharacteristic(Characteristic.TargetDoorState, targetDoorState);
-
-        // Notifications
+        
+        const { currentDoorState, raw } = await this.getState();
+        
+        // Détection de changement d’état réel
         if (this.lastDoorState !== currentDoorState) {
-          // Allume brièvement le switch pour générer notification
+          this.log.info(`[TahomaPortail] Changement détecté via API : ${raw}`);
+        
+          // Met à jour l’état HomeKit
+          garageService.updateCharacteristic(Characteristic.CurrentDoorState, currentDoorState);
+        
+          const targetDoorState = 
+            currentDoorState === Characteristic.CurrentDoorState.OPEN
+              ? Characteristic.TargetDoorState.OPEN
+              : Characteristic.TargetDoorState.CLOSED;
+        
+          garageService.updateCharacteristic(Characteristic.TargetDoorState, targetDoorState);
+        
+          // Met à jour le mode piéton
+          pedestrianService.updateCharacteristic(
+            Characteristic.On,
+            raw === "pedestrian"
+          );
+        
+          // Notification HomeKit (changement)
           notificationService.updateCharacteristic(Characteristic.On, true);
           setTimeout(() => notificationService.updateCharacteristic(Characteristic.On, false), 500);
+        
           this.lastDoorState = currentDoorState;
-        }
 
       }catch(err){
         this.log.error("[TahomaPortail] Erreur polling :", err.message || err);
@@ -297,18 +279,31 @@ class SomfyGatePlatform {
   async getState() {
     try {
       const devices = await this.callTahomAPI("getDevices");
-      let portalState = "unknown";
+      const portal = devices.find(d => d.deviceURL === this.config.deviceURL);
 
-      for (const d of devices) {
-        if (d.deviceURL === this.config.deviceURL) {
-          const s = d.states.find(st => st.name === "core:OpenClosedPedestrianState");
-          portalState = s ? s.value : "unknown";
+      if (!portal) {
+        this.log.warn("[TahomaPortail] Portail non trouvé dans la liste des devices !");
+        return { currentDoorState: Characteristic.CurrentDoorState.UNKNOWN };
+      }
+      
+      // On cherche plusieurs états possibles (car selon les firmwares, Somfy change les noms)
+      const possibleStates = [
+        "core:OpenClosedPedestrianState",
+        "io:DiscreteOpenState",
+        "core:OpenClosedState"
+      ];
+      
+      let stateVal = "unknown";
+      for (const name of possibleStates) {
+        const s = portal.states.find(st => st.name === name);
+        if (s && s.value) {
+          stateVal = s.value;
+          break;
         }
       }
 
-      const currentDoorState = this.portalStateToHomeKit(portalState);
-
-      return { currentDoorState };
+      const currentDoorState = this.portalStateToHomeKit(stateVal);
+      return { currentDoorState, raw: stateVal };
       
     } catch (err) {
       this.log.error("[TahomaPortail] Erreur getState:", err.message || err);
