@@ -211,21 +211,31 @@ class SomfyGatePlatform {
     notificationService.getCharacteristic(Characteristic.On).onSet(() => {
       // Pas d'action ici, ce switch est juste pour notifications
     });
-
+    
+    // Fonction utilitaire pour convertir la position en état HomeKit
+    function positionToHomeKit(position) {
+      const closedThreshold = 51000; // Fermer si ≥ 51000
+      const openThreshold = 1000;    // Ouvert si ≤ 1000
+    
+      if (position <= openThreshold) return Characteristic.CurrentDoorState.OPEN;
+      if (position >= closedThreshold) return Characteristic.CurrentDoorState.CLOSED;
+      return Characteristic.CurrentDoorState.STOPPED; // En mouvement ou partiellement ouvert
+    }
+    
     // setInterval principal qui permet de mettre à jour régulièrement l'état + notification
     const statePollingInterval = (this.config.pollingInterval || 10) * 1000;
 
     this.pollingTimer = setInterval(async () => {
       try {
         const devices = await this.callTahomAPI("getDevices");
-        let portal = devices.find(d => d.deviceURL === this.config.deviceURL);
+        const portal = devices.find(d => d.deviceURL === this.config.deviceURL);
         if (!portal) return;
-
-        const stateVal = portal.states.find(st => st.name === "core:OpenClosedPedestrianState")?.value || "unknown";
-
-        const currentDoorState = this.portalStateToHomeKit(stateVal);
-
-        // Vérifie si une exécution est en cours côté Tahoma
+        
+        // ✅ Récupère la position réelle du portail
+        const position = portal.states.find(st => st.name === "core:ManufacturerSettingsState")?.value?.current_position ?? 51200;
+        const currentDoorState = positionToHomeKit(position);
+        
+        // Vérifie si une commande HomeKit est en cours
         if (this.currentExecId) {
           const exec = portal.executions?.find(e => e.execId === this.currentExecId);
           if (!exec || exec.status !== "IN_PROGRESS") {
@@ -233,19 +243,26 @@ class SomfyGatePlatform {
           }
         }
         
-        // Met à jour le switch piéton selon l'état réel
+        // Mise à jour du switch Mode Piéton
         pedestrianService.updateCharacteristic(
           Characteristic.On,
-          stateVal === "pedestrian"
+          portal.states.find(st => st.name === "core:OpenClosedPedestrianState")?.value === "pedestrian"
         );
         
-        // 🔍 Détection d’un changement manuel (ex: télécommande)
+        // 🔍 Détection de changement manuel (télécommande ou autre)
         if (this.lastDoorState !== currentDoorState) {
-          this.log.info(`[TahomaPortail] Changement d’état détecté : ${stateVal}`);
+          const stateLabel = {
+            [Characteristic.CurrentDoorState.OPEN]: "OUVERT",
+            [Characteristic.CurrentDoorState.CLOSED]: "FERMÉ",
+            [Characteristic.CurrentDoorState.STOPPED]: "EN MOUVEMENT / PARTIEL"
+          }[currentDoorState] || "INCONNU";
         
-          // Met à jour HomeKit même sans execId (commande externe)
+          this.log.info(`[TahomaPortail] Changement d’état détecté : ${stateLabel}`);
+        
+          // Met à jour HomeKit même sans execId
           garageService.updateCharacteristic(Characteristic.CurrentDoorState, currentDoorState);
         
+          // Détermine la cible
           let targetDoorState;
           switch (currentDoorState) {
             case Characteristic.CurrentDoorState.OPEN:
@@ -257,14 +274,13 @@ class SomfyGatePlatform {
             default:
               targetDoorState = garageService.getCharacteristic(Characteristic.TargetDoorState).value;
           }
-        
           garageService.updateCharacteristic(Characteristic.TargetDoorState, targetDoorState);
         
-          // 🔔 Notification HomeKit
+          // Notification HomeKit
           notificationService.updateCharacteristic(Characteristic.On, true);
           setTimeout(() => notificationService.updateCharacteristic(Characteristic.On, false), 500);
         
-          // Met à jour la mémoire d’état
+          // Sauvegarde l’état pour la prochaine détection
           this.lastDoorState = currentDoorState;
         }
 
