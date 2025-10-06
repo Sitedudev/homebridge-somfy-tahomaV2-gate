@@ -25,6 +25,14 @@
         "type": "string",
         "placeholder": "io://1234-4567-8901/12345678"
       },
+      "pollingInterval": {
+        "title": "Intervalle de mise à jour du portail (secondes)",
+        "type": "integer",
+        "default": 10,
+        "minimum": 5,
+        "maximum": 300,
+        "description": "Temps entre chaque mise à jour de l'état du portail."
+      },
       "logState": {
         "title": "Activer les logs d'état",
         "type": "boolean",
@@ -32,11 +40,11 @@
       },
       "logInterval": {
         "title": "Intervalle des logs (secondes)",
-        "type": "number",
+        "type": "integer",
         "default": 30,
         "minimum": 5,
         "maximum": 300,
-        "description": "Définissez toutes les combien de secondes afficher l'état du portail (utilisé uniquement si 'Activer les logs' est activé"
+        "description": "Définissez toutes les combien de secondes afficher l'état du portail (utilisé uniquement si 'Activer les logs' est activé)"
       }
     },
     "required": ["ip", "token"]
