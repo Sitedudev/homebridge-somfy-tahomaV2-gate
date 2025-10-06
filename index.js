@@ -245,6 +245,7 @@ class SomfyGatePlatform {
           setTimeout(() => notificationService.updateCharacteristic(Characteristic.On, false), 500);
         
           this.lastDoorState = currentDoorState;
+        }
 
       }catch(err){
         this.log.error("[TahomaPortail] Erreur polling :", err.message || err);
